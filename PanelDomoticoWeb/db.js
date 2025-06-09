@@ -8,12 +8,26 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Función para abrir la conexión
+// Instancia única de la base de datos
+let dbInstance;
+
+// Función para abrir (o reutilizar) la conexión
 export async function openDb() {
-    return open({
-        filename: path.join(__dirname, 'edusec.db'),
-        driver: sqlite3.Database
-    });
+    if (!dbInstance) {
+        dbInstance = await open({
+            filename: path.join(__dirname, 'edusec.db'),
+            driver: sqlite3.Database
+        });
+    }
+    return dbInstance;
+}
+
+// Obtener la instancia ya inicializada
+export function getDb() {
+    if (!dbInstance) {
+        throw new Error('Database not initialized. Call initDb first.');
+    }
+    return dbInstance;
 }
 
 // Al inicializar la app, creamos tablas si no existen

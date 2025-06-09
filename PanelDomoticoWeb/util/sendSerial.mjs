@@ -15,8 +15,10 @@ export default async function sendSerial(comando) {
     return new Promise((resolve, reject) => {
         // Si aún no se ha abierto el puerto, lo abrimos
         if (!port) {
-            // CAMBIA 'COM5' por tu puerto real (ej. '/dev/ttyUSB0' en Linux)
-            port = new SerialPort('COM5', {
+            // Usa el puerto definido por la variable de entorno SERIAL_PORT o COM5 por defecto
+            const portName = process.env.SERIAL_PORT || 'COM5';
+            console.log(`Conectando al puerto serial ${portName}`);
+            port = new SerialPort(portName, {
                 baudRate: 9600,
                 autoOpen: false
             });

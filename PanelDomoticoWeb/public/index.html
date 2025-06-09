@@ -395,10 +395,26 @@
         }
         setInterval(clockTick, 1000);
 
-        function cmd(a) {
-            toast(`Comando ${a}`);
-            if (a === 'abrir') updateDoor('🔓 Abierta');
-            if (a === 'cerrar') updateDoor('🔒 Cerrada');
+        async function cmd(a) {
+            if (!authToken) {
+                toast('No autenticado');
+                return;
+            }
+            try {
+                const res = await fetch(`/comando/${a}`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    toast(data.error || data.msg || 'Error al ejecutar');
+                    return;
+                }
+                toast(data.resultado || 'Ejecutado');
+                if (a === 'abrir') updateDoor('🔓 Abierta');
+                if (a === 'cerrar') updateDoor('🔒 Cerrada');
+            } catch {
+                toast('Error de conexión');
+            }
         }
         function updateDoor(s) {
             document.querySelectorAll('#doorState, #homeDoorState').forEach(el => {
@@ -421,15 +437,28 @@
 
         // Variables globales
         let currentUser = null;
+        let authToken = null;
 
         // Manejo de login
-        loginForm.onsubmit = e => {
+        loginForm.onsubmit = async e => {
             e.preventDefault();
             loginError.classList.add('hidden');
             const u = user.value.trim(), p = pass.value.trim();
-            if (u === 'admin' && p === 'admin') {
-                currentUser = { username: u, role: 'root' };
-                lblUser.textContent = u;
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    loginError.textContent = data.msg || 'Credenciales incorrectas';
+                    loginError.classList.remove('hidden');
+                    return;
+                }
+                authToken = data.token;
+                currentUser = { username: data.username, role: data.role };
+                lblUser.textContent = data.username;
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -438,8 +467,8 @@
                     initMenu();
                     document.querySelector('#menu button').click();
                 }, 600);
-            } else {
-                loginError.textContent = 'Credenciales incorrectas';
+            } catch {
+                loginError.textContent = 'Error de conexión';
                 loginError.classList.remove('hidden');
             }
         };

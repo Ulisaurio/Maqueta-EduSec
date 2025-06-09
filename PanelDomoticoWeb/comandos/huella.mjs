@@ -1,5 +1,5 @@
-import { sendSerial } from '../util/sendSerial.mjs';
+import sendSerial from '../util/sendSerial.mjs';
 
-export default async function (serial) {
-    return await sendSerial(serial, 'huella');
+export default async function () {
+    return await sendSerial('huella');
 }

@@ -1,4 +1,3 @@
-﻿imp// app.mjs
 import express from 'express';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
