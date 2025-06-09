@@ -8,12 +8,21 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+let dbInstance;
+
 // Función para abrir la conexión
 export async function openDb() {
-    return open({
-        filename: path.join(__dirname, 'edusec.db'),
-        driver: sqlite3.Database
-    });
+    if (!dbInstance) {
+        dbInstance = await open({
+            filename: path.join(__dirname, 'edusec.db'),
+            driver: sqlite3.Database
+        });
+    }
+    return dbInstance;
+}
+
+export function getDb() {
+    return dbInstance;
 }
 
 // Al inicializar la app, creamos tablas si no existen

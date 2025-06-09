@@ -1,4 +1,4 @@
-import { sendSerial } from '../util/sendSerial.mjs';
+import sendSerial from '../util/sendSerial.mjs';
 
 export default async function (serial) {
     const respuesta = await sendSerial(serial, 'abrir');
