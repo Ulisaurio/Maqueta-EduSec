@@ -1,6 +1,6 @@
-import { sendSerial } from '../util/sendSerial.mjs';
+import sendSerial from '../util/sendSerial.mjs';
 
-export default async function (serial) {
-    const respuesta = await sendSerial(serial, 'abrir');
+export default async function () {
+    const respuesta = await sendSerial('abrir');
     return respuesta || 'Puerta abierta';
 }
