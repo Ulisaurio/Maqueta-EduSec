@@ -16,6 +16,16 @@ export async function openDb() {
     });
 }
 
+let dbInstance;
+
+// Devuelve una instancia singleton de la base de datos
+export async function getDb() {
+    if (!dbInstance) {
+        dbInstance = await openDb();
+    }
+    return dbInstance;
+}
+
 // Al inicializar la app, creamos tablas si no existen
 export async function initDb() {
     const db = await openDb();
