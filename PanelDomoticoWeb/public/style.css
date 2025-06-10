@@ -1,46 +1,51 @@
-body {
-    font-family: sans-serif;
-    background-color: #f3f4f6;
-    color: #111;
-    margin: 0;
-    padding: 2rem;
+html {
+    font-family: "Inter", sans-serif;
+    transition: background-color .2s, color .2s;
 }
 
-h1 {
-    text-align: center;
-    margin-bottom: 1rem;
-    color: #0f172a;
+.hidden {
+    display: none;
 }
 
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+.fade-in {
+    animation: fadeIn .4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar-collapsed aside {
+    width: 4rem;
+}
+
+.sidebar-collapsed .sidebar-text {
+    display: none;
+}
+
+.sidebar-collapsed #toggleSidebarIcon {
+    transform: rotate(180deg);
+}
+
+.sparkline {
+    width: 100%;
+    height: 50px;
+}
+
+.btn {
+    background-image: linear-gradient(to bottom right, #4f46e5, #3b82f6);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: opacity .2s, transform .2s;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    gap: 0.25rem;
 }
 
-button {
-    background-color: #1e3a8a;
-    color: white;
-    border: none;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-    button:hover {
-        background-color: #3b82f6;
-    }
-
-.output {
-    margin-top: 2rem;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
