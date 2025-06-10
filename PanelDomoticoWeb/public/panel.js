@@ -418,8 +418,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td class="px-3 py-1">${u.role}</td>
                   <td class="px-3 py-1">${u.activo ? '✅' : '❌'}</td>
                   <td class="px-3 py-1 space-x-2">
-                    <button class="toggleUser btn btn-sm" data-id="${u.id}" data-activo="${u.activo}">${u.activo ? 'Desactivar' : 'Activar'}</button>
-                    <button class="delUser btn btn-sm btn-danger" data-id="${u.id}">Eliminar</button>
+                    <button class="toggleUser btn btn-small" data-id="${u.id}" data-activo="${u.activo}">${u.activo ? 'Desactivar' : 'Activar'}</button>
+                    <button class="delUser btn btn-small btn-danger" data-id="${u.id}">Eliminar</button>
                   </td>`;
                 tbody.appendChild(tr);
             });
