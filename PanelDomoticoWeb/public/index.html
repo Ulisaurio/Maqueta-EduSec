@@ -212,17 +212,25 @@
             </div>`;
         }
 
-        // Formulario de gestión de cuentas
+        // Formulario y tabla de cuentas
         function accountManager() {
             return `
-            <form class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-              <div class="flex flex-col sm:flex-row gap-4">
-                <input placeholder="Usuario" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <input type="password" placeholder="Contraseña" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <select class="px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500"><option>admin</option><option>root</option></select>
-                <button class="btn">Crear</button>
+            <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+              <form id="addUserForm" class="flex flex-col sm:flex-row gap-4">
+                <input id="newUser" placeholder="Usuario" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
+                <input id="newPass" type="password" placeholder="Contraseña" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
+                <select id="newRole" class="px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500"><option value="admin">admin</option><option value="root">root</option></select>
+                <button class="btn" type="submit">Crear</button>
+              </form>
+              <div class="overflow-x-auto">
+                <table id="usersTable" class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                  <thead class="bg-slate-100 dark:bg-slate-700">
+                    <tr><th class="px-3 py-2 text-left">Usuario</th><th class="px-3 py-2 text-left">Rol</th><th class="px-3 py-2 text-left">Activo</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+                </table>
               </div>
-            </form>`;
+            </div>`;
         }
 
         // Definición de secciones
@@ -374,6 +382,7 @@
             content.classList.add('fade-in');
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
+            if (id === 'cuentas') loadUsers();
         }
 
         const applyBtnStyle = () => {
@@ -421,15 +430,30 @@
 
         // Variables globales
         let currentUser = null;
+        let jwtToken = '';
+
+        const api = async (url, opts = {}) => {
+            opts.headers = opts.headers || {};
+            if (jwtToken) opts.headers['Authorization'] = `Bearer ${jwtToken}`;
+            const res = await fetch(url, opts);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.msg || 'Error');
+            return data;
+        };
 
         // Manejo de login
-        loginForm.onsubmit = e => {
+        loginForm.onsubmit = async e => {
             e.preventDefault();
             loginError.classList.add('hidden');
-            const u = user.value.trim(), p = pass.value.trim();
-            if (u === 'admin' && p === 'admin') {
-                currentUser = { username: u, role: 'root' };
-                lblUser.textContent = u;
+            try {
+                const data = await api('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user.value.trim(), password: pass.value.trim() })
+                });
+                jwtToken = data.token;
+                currentUser = { username: data.username, role: data.role };
+                lblUser.textContent = data.username;
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -438,11 +462,72 @@
                     initMenu();
                     document.querySelector('#menu button').click();
                 }, 600);
-            } else {
-                loginError.textContent = 'Credenciales incorrectas';
+            } catch (err) {
+                loginError.textContent = err.message;
                 loginError.classList.remove('hidden');
             }
         };
+
+        async function loadUsers() {
+            try {
+                const users = await api('/users');
+                renderUsers(users);
+            } catch {
+                toast('Error cargando usuarios');
+            }
+        }
+
+        function renderUsers(list) {
+            const tbody = document.querySelector('#usersTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            list.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td class="px-3 py-1">${u.username}</td>
+                  <td class="px-3 py-1">${u.role}</td>
+                  <td class="px-3 py-1">${u.activo ? '✅' : '❌'}</td>
+                  <td class="px-3 py-1 space-x-2">
+                    <button class="toggleUser text-indigo-600 hover:underline text-sm" data-id="${u.id}" data-activo="${u.activo}">Toggle</button>
+                    <button class="delUser text-red-600 hover:underline text-sm" data-id="${u.id}">Eliminar</button>
+                  </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('submit', async e => {
+            if (e.target.id === 'addUserForm') {
+                e.preventDefault();
+                const u = newUser.value.trim();
+                const p = newPass.value.trim();
+                const r = newRole.value;
+                if (!u || !p) return;
+                try {
+                    await api('/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, role: r }) });
+                    e.target.reset();
+                    loadUsers();
+                } catch (err) { toast(err.message); }
+            }
+        });
+
+        document.addEventListener('click', async e => {
+            if (e.target.classList.contains('toggleUser')) {
+                const id = e.target.dataset.id;
+                const act = e.target.dataset.activo === '1';
+                try {
+                    await api(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: act ? 0 : 1 }) });
+                    loadUsers();
+                } catch (err) { toast(err.message); }
+            }
+            if (e.target.classList.contains('delUser')) {
+                const id = e.target.dataset.id;
+                if (!confirm('¿Eliminar usuario?')) return;
+                try {
+                    await api(`/users/${id}`, { method: 'DELETE' });
+                    loadUsers();
+                } catch (err) { toast(err.message); }
+            }
+        });
 
         // Otros botones
         themeBtn.onclick = () => {
