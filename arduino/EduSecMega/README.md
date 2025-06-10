@@ -16,7 +16,7 @@ single Arduino Mega can handle all commands from the Node.js panel.
 | RFID RST           | 11  |
 | Buzzer             | 7   |
 | RGB LED R/G/B      | 3/5/6 |
-| Fingerprint TX/RX  | 18/19 |
+| Fingerprint (Serial1) TX/RX | 18/19 |
 | Voltage sense      | A0  |
 
 Adjust the wiring if necessary. The serial port runs at 9600 bps and expects

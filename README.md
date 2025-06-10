@@ -24,6 +24,13 @@ The UI includes:
 
 All components aim to be mobile friendly and accessible.
 
+## Arduino Firmware
+
+The `arduino/` directory contains the sketches that run on the microcontroller.
+`arduino/original` stores the standalone prototypes, while
+`arduino/EduSecMega` is the unified sketch for an Arduino Mega. Consult the
+respective `README.md` files for pin mapping and library requirements.
+
 ### Assets Notice
 The logo file `logo_edusec.png` is not included in this repository.
 After cloning the project, manually copy it into:

@@ -17,6 +17,10 @@
 #define LED_R        3
 #define LED_G        5
 #define LED_B        6
+// Fingerprint sensor on Serial1 (RX1=19, TX1=18)
+
+// ----------------------------------------------------------
+Adafruit_Fingerprint finger(&Serial1);
 #define FINGER_RX    19     // Serial1 RX
 #define FINGER_TX    18     // Serial1 TX
 
@@ -52,7 +56,7 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
 
-  fingerSerial.begin(57600);
+  Serial1.begin(57600);
   finger.begin(57600);
   if (!finger.verifyPassword()) Serial.println("⚠️ Huella no detectada");
 
