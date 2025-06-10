@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EduSec · Panel Domótico</title>
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#2d2d30" />
 
     <!-- Fuente & Tailwind -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -43,7 +43,10 @@
         <!-- SIDEBAR -->
         <aside class="w-60 bg-gradient-to-b from-white via-slate-50 to-slate-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-900 shadow flex flex-col transition-all">
             <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-                <span class="text-2xl font-bold sidebar-text">EduSec</span>
+                <div class="flex items-center gap-2">
+                    <img src="img/logo_edusec.png" alt="EduSec logo" class="w-8 h-8 rounded-full" />
+                    <span class="text-2xl font-bold sidebar-text">EduSec</span>
+                </div>
                 <button id="toggleSidebar" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">
                     <i data-feather="chevron-left" id="toggleSidebarIcon"></i>
                 </button>

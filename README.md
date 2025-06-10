@@ -23,3 +23,8 @@ The UI includes:
 
 
 All components aim to be mobile friendly and accessible.
+
+### Assets Notice
+The logo file `logo_edusec.png` is not included in this repository.
+After cloning the project, manually copy it into:
+`PanelDomoticoWeb/public/img/`
