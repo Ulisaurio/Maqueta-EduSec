@@ -1,6 +1,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Adafruit_Fingerprint.h>
+#include <SoftwareSerial.h>
 #include <SPI.h>
 #include <MFRC522.h>
 
@@ -20,6 +21,12 @@
 
 // ----------------------------------------------------------
 Adafruit_Fingerprint finger(&Serial1);
+#define FINGER_RX    19     // Serial1 RX
+#define FINGER_TX    18     // Serial1 TX
+
+// ----------------------------------------------------------
+SoftwareSerial fingerSerial(FINGER_RX, FINGER_TX);
+Adafruit_Fingerprint finger(&fingerSerial);
 MFRC522 rfid(SS_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
