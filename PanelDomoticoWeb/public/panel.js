@@ -274,12 +274,14 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.classList.add('bg-indigo-600', 'text-white', 'border-l-4', 'border-indigo-600');
             content.innerHTML = sections[id];
             feather.replace();
+
             applyBtnStyle();
             content.classList.add('fade-in');
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
         }
+
 
         const applyBtnStyle = () => {
             document.querySelectorAll('.btn').forEach(b => {
