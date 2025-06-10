@@ -274,12 +274,20 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.classList.add('bg-indigo-600', 'text-white', 'border-l-4', 'border-indigo-600');
             content.innerHTML = sections[id];
             feather.replace();
+
+            applyBtnStyle();
             content.classList.add('fade-in');
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
         }
 
+
+        const applyBtnStyle = () => {
+            document.querySelectorAll('.btn').forEach(b => {
+                b.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white', 'px-4', 'py-2', 'rounded');
+            });
+        };
 
         const toast = msg => {
             const t = document.createElement('div');
