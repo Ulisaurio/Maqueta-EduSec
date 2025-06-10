@@ -168,15 +168,38 @@ app.patch('/users/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { password, activo, role } = req.body;
     try {
+        const current = await db.get(`SELECT role, activo FROM usuarios WHERE id = ?`, [id]);
+        if (!current) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+
+        if (current.role === 'root') {
+            const { count } = await db.get(`SELECT COUNT(*) AS count FROM usuarios WHERE role = 'root' AND activo = 1`);
+            const newRole = role || current.role;
+            const newActivo = typeof activo !== 'undefined' ? (activo ? 1 : 0) : current.activo;
+            if (count === 1 && (newRole !== 'root' || newActivo === 0)) {
+                return res.status(400).json({ msg: 'No se puede desactivar o cambiar el único usuario root activo' });
+            }
+        }
+
+        const updates = [];
+        const params = [];
         if (password) {
             const hashPw = await bcrypt.hash(password, 10);
-            await db.run(`UPDATE usuarios SET password = ? WHERE id = ?`, [hashPw, id]);
+            updates.push('password = ?');
+            params.push(hashPw);
         }
         if (typeof activo !== 'undefined') {
-            await db.run(`UPDATE usuarios SET activo = ? WHERE id = ?`, [activo ? 1 : 0, id]);
+            updates.push('activo = ?');
+            params.push(activo ? 1 : 0);
         }
         if (role) {
-            await db.run(`UPDATE usuarios SET role = ? WHERE id = ?`, [role, id]);
+            updates.push('role = ?');
+            params.push(role);
+        }
+        if (updates.length) {
+            params.push(id);
+            await db.run(`UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`, params);
         }
         return res.json({ msg: 'Usuario actualizado' });
     } catch (err) {
@@ -191,6 +214,16 @@ app.delete('/users/:id', authenticateToken, async (req, res) => {
     }
     const { id } = req.params;
     try {
+        const current = await db.get(`SELECT role FROM usuarios WHERE id = ?`, [id]);
+        if (!current) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+        if (current.role === 'root') {
+            const { count } = await db.get(`SELECT COUNT(*) AS count FROM usuarios WHERE role = 'root'`);
+            if (count === 1) {
+                return res.status(400).json({ msg: 'No se puede eliminar el único usuario root' });
+            }
+        }
         await db.run(`DELETE FROM usuarios WHERE id = ?`, [id]);
         return res.json({ msg: 'Usuario eliminado' });
     } catch (err) {

@@ -80,5 +80,15 @@ export async function initDb() {
         });
     }
 
+    // Si no hay ningún usuario root activo, reactivamos el primero que exista
+    const activeRoot = await db.get(`SELECT COUNT(*) AS count FROM usuarios WHERE role = 'root' AND activo = 1`);
+    if (activeRoot.count === 0) {
+        const anyRoot = await db.get(`SELECT id FROM usuarios WHERE role = 'root' LIMIT 1`);
+        if (anyRoot) {
+            await db.run(`UPDATE usuarios SET activo = 1 WHERE id = ?`, [anyRoot.id]);
+            console.log(`⚠️  Usuario root ID ${anyRoot.id} reactivado automáticamente`);
+        }
+    }
+
     return db;
 }

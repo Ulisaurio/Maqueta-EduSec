@@ -4,7 +4,8 @@
   "type": "module",
   "main": "app.mjs",
   "scripts": {
-    "start": "node app.mjs"
+    "start": "node app.mjs",
+    "recover": "node util/recoverRoot.mjs"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
