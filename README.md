@@ -21,4 +21,5 @@ The UI includes:
 - Module verification with loading feedback
 - Temperature chart with hover tooltips
 
+
 All components aim to be mobile friendly and accessible.
