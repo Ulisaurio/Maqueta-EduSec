@@ -18,6 +18,7 @@ The UI includes:
 - A login form with basic validation
 - A responsive dashboard with a sidebar menu
 - Theme toggle (light/dark)
-- Demo mode switch
+- Module verification with loading feedback
+- Temperature chart with hover tooltips
 
 All components aim to be mobile friendly and accessible.

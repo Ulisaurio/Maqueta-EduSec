@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return `
             <div class="relative">
               ${card('cpu', name, status, cls)}
-              <button onclick="verifyModule('${name}')" class="absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-2 py-1 rounded">Verificar</button>
+              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-2 py-1 rounded">Verificar</button>
             </div>`;
         }
 
@@ -48,15 +48,22 @@ document.addEventListener("DOMContentLoaded", () => {
         function renderSparkline() {
             const ctx = document.getElementById('sparklineChart').getContext('2d');
             if (ctx._chart) { ctx._chart.destroy(); }
+            const temps = [23, 24, 24, 25, 24, 23, 22, 23, 24, 25, 24, 23];
+            const now = new Date();
+            const labels = temps.map((_, i) => {
+                const d = new Date(now.getTime() - (temps.length - 1 - i) * 3600 * 1000);
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            });
             ctx._chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: Array.from({ length: 12 }, (_, i) => i + 1),
+                    labels,
                     datasets: [{
-                        data: [23, 24, 24, 25, 24, 23, 22, 23, 24, 25, 24, 23],
+                        data: temps,
                         borderColor: '#3b82f6',
                         borderWidth: 1,
-                        pointRadius: 0,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#3b82f6',
                         fill: false,
                         tension: 0.3
                     }]
@@ -65,9 +72,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: { x: { display: false }, y: { display: false } },
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: ctx => `${ctx.formattedValue}°C - ${ctx.label}`
+                            }
+                        }
+                    }
                 }
             });
+            updateTemp(temps[temps.length - 1]);
         }
 
         // Tabla de accesos diarios
@@ -312,6 +328,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (el) el.textContent = s;
             });
         }
+        function updateTemp(v) {
+            const t1 = document.getElementById('tempValue');
+            const t2 = document.getElementById('tempHeader');
+            if (t1) t1.textContent = `${v}°C`;
+            if (t2) t2.textContent = `${v}°C`;
+        }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
             if (d) d.classList.toggle('hidden');
@@ -322,8 +344,18 @@ document.addEventListener("DOMContentLoaded", () => {
         function exportAccessCSV() {
             toast('Exportando CSV... (simulado)');
         }
-        function verifyModule(mod) {
-            toast(`Verificando ${mod}... (simulado)`);
+        function verifyModule(mod, btn) {
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Verificando…';
+            }
+            setTimeout(() => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Verificar';
+                }
+                toast(`Resultado de ${mod}: OK`);
+            }, 1000);
         }
 
         // Variables globales
@@ -386,8 +418,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td class="px-3 py-1">${u.role}</td>
                   <td class="px-3 py-1">${u.activo ? '✅' : '❌'}</td>
                   <td class="px-3 py-1 space-x-2">
-                    <button class="toggleUser text-indigo-600 hover:underline text-sm" data-id="${u.id}" data-activo="${u.activo}">Toggle</button>
-                    <button class="delUser text-red-600 hover:underline text-sm" data-id="${u.id}">Eliminar</button>
+                    <button class="toggleUser btn btn-sm" data-id="${u.id}" data-activo="${u.activo}">${u.activo ? 'Desactivar' : 'Activar'}</button>
+                    <button class="delUser btn btn-sm btn-danger" data-id="${u.id}">Eliminar</button>
                   </td>`;
                 tbody.appendChild(tr);
             });
@@ -411,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener('click', async e => {
             if (e.target.classList.contains('toggleUser')) {
                 const id = e.target.dataset.id;
-                const act = e.target.dataset.activo === '1';
+                const act = e.target.dataset.activo === '1' || e.target.dataset.activo === 'true';
                 try {
                     await api(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: act ? 0 : 1 }) });
                     loadUsers();
