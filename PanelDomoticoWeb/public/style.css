@@ -331,6 +331,10 @@ body {
     background: rgba(37, 99, 235, 0.1);
     color: #2563eb;
 }
+.status.inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
 
 .module-icon {
     transition: transform .2s;
