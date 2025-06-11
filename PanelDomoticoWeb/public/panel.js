@@ -340,6 +340,11 @@ document.addEventListener("DOMContentLoaded", () => {
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <label for="serialPort" class="flex-1">Puerto Serie:</label>
+                    <input id="serialPort" type="text" class="input-field w-32">
+                    <button id="applySerialPort" class="btn btn-sm">Aplicar</button>
+                  </div>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                 </div>
               </div>
@@ -434,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
             if (id === 'monitoreo') startSecurityMonitoring();
+            if (id === 'config') loadSerialPort();
         }
 
 
@@ -925,6 +931,16 @@ const applyBtnStyle = () => {};
             }
         }
 
+        async function loadSerialPort() {
+            try {
+                const data = await api('/settings/serial-port');
+                const inp = document.getElementById('serialPort');
+                if (inp) inp.value = data.serialPort || '';
+            } catch {
+                toast('Error cargando configuración');
+            }
+        }
+
         function renderUsers(list) {
             const tbody = document.querySelector('#usersTable tbody');
             if (!tbody) return;
@@ -1021,6 +1037,15 @@ const applyBtnStyle = () => {};
                 toast('Caché limpiada');
             } else if (e.target.closest('#applySensorInterval')) {
                 toast('Intervalo aplicado');
+            } else if (e.target.closest('#applySerialPort')) {
+                const port = document.getElementById('serialPort').value.trim();
+                if (port) {
+                    try {
+                        await api('/settings/serial-port', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serialPort: port }) });
+                        toast('Puerto actualizado');
+                        await api('/status/arduino').then(s => { if (!s.available) showArduinoAlert(); });
+                    } catch (err) { toast(err.message); }
+                }
             } else if (e.target.closest('#applySessionTimeout')) {
                 toast('Tiempo de espera actualizado');
             } else if (e.target.closest('#updateBtn')) {
