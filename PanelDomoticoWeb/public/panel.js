@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-green-100 text-green-700')}
+                ${card('shield', 'Seguridad del Sistema', '<span id="modulesSummary" class="font-medium">--</span>', 'bg-green-100 text-green-700')}
                 ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
@@ -377,6 +377,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const el = document.getElementById('mainsStatus');
             if (el) el.textContent = v === null ? '--' : v;
         }
+        function modulesSummary() {
+            const cards = document.querySelectorAll('.module-grid .module-card');
+            const allOk = Array.from(cards).every(c => c.classList.contains('module-ok'));
+            return allOk ? 'Todos los módulos OK' : 'Módulos con fallos';
+        }
+        function updateModulesSummary() {
+            const el = document.getElementById('modulesSummary');
+            if (el) el.textContent = modulesSummary();
+        }
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
@@ -566,6 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     btn.disabled = false;
                     btn.textContent = 'Verificar';
                 }
+                updateModulesSummary();
             }
         }
 
@@ -605,6 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    checkAllModules().then(updateModulesSummary);
                 }, 600);
             } catch (err) {
                 loginError.textContent = err.message;
