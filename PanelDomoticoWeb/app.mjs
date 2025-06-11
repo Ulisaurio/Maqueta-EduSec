@@ -5,8 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { getDb, initDb, addHuella, deleteHuella } from './db.js';
-import { isArduinoAvailable } from './util/sendSerial.mjs';
+import { getDb, initDb } from './db.js';
+import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
 import borrarCmd from './comandos/borrar.mjs';
@@ -208,48 +208,42 @@ app.get('/huellas', authenticateToken, async (req, res) => {
         return res.status(500).json({ msg: 'Error interno' });
     }
 });
-
-app.post('/huellas/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
+// --------- Administrar huellas ---------
+app.post('/huellas', authenticateToken, async (req, res) => {
+    const { usuario_id, huella_id } = req.body;
+    if (!usuario_id || !huella_id) {
+        return res.status(400).json({ msg: 'usuario_id y huella_id requeridos' });
+    }
     try {
-        const resultado = await enrolarCmd(parseInt(id));
+        const resp = await sendSerial(`enrolar ${huella_id}`);
         await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle)
-         VALUES (?, ?, ?)`,
-            [req.user.id, 'enrolar', resultado.mensaje || JSON.stringify(resultado)]
+            `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
+            [usuario_id, huella_id]
         );
-        return res.json({ accion: 'enrolar', resultado });
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', `usuario:${usuario_id}, huella:${huella_id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
     } catch (err) {
-        const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
-        console.error(`Error ejecutando comando 'enrolar':`, mensaje);
-        await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle)
-         VALUES (?, ?, ?)`,
-            [req.user.id, 'enrolar', mensaje]
-        );
-        return res.json({ accion: 'enrolar', resultado: mensaje });
+        console.error('Error en POST /huellas:', err);
+        return res.status(500).json({ msg: 'Error interno' });
     }
 });
 
 app.delete('/huellas/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
-        const resultado = await borrarCmd(parseInt(id));
+        const resp = await sendSerial(`borrar ${id}`);
+        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
         await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle)
-         VALUES (?, ?, ?)`,
-            [req.user.id, 'borrar', resultado.mensaje || JSON.stringify(resultado)]
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
         );
-        return res.json({ accion: 'borrar', resultado });
+        return res.json({ msg: resp });
     } catch (err) {
-        const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
-        console.error(`Error ejecutando comando 'borrar':`, mensaje);
-        await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle)
-         VALUES (?, ?, ?)`,
-            [req.user.id, 'borrar', mensaje]
-        );
-        return res.json({ accion: 'borrar', resultado: mensaje });
+        console.error('Error en DELETE /huellas/:id:', err);
+        return res.status(500).json({ msg: 'Error interno' });
     }
 });
 
