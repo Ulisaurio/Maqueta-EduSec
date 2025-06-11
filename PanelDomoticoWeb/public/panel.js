@@ -414,12 +414,19 @@ const applyBtnStyle = () => {};
             const el = document.getElementById('modulesSummary');
             if (el) el.textContent = modulesSummary();
         }
+        function parseNumber(str) {
+            if (!str || /(no disponible|error|timeout|sin respuesta)/i.test(str)) {
+                return null;
+            }
+            const m = /([-+]?\d+(?:\.\d+)?)/.exec(str);
+            return m ? parseFloat(m[1]) : null;
+        }
+
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
@@ -435,9 +442,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -452,9 +458,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
@@ -502,9 +508,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -519,9 +524,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
