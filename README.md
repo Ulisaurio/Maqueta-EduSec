@@ -30,6 +30,8 @@ The UI includes:
 - A responsive dashboard with a sidebar menu
 - Theme toggle (light/dark)
 - Module verification with loading feedback
+- Silent buzzer status checks (the buzzer only sounds on alarms or when
+  using the "Probar" testing button)
 - Temperature chart with hover tooltips
 
 
