@@ -144,6 +144,7 @@ void loop() {
 
   String cmd = bufferIn;
   cmd.trim();
+  cmd.toLowerCase();
   bufferIn = "";
   cmdReady = false;
 
