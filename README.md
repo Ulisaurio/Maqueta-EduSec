@@ -6,10 +6,12 @@ This repository contains a simple Node.js backend and a web-based front end for 
 
 ```bash
 npm install
-node PanelDomoticoWeb/app.mjs
+SERIAL_PORT=/dev/ttyUSB0 node PanelDomoticoWeb/app.mjs
 ```
-
-The application serves the contents of `PanelDomoticoWeb/public`. Open `http://localhost:3000` after starting the server.
+The `SERIAL_PORT` variable should point to the Arduino's serial device.
+If omitted it defaults to `COM5`. The application serves the contents of
+`PanelDomoticoWeb/public`. Open `http://localhost:3000` after starting the
+server.
 
 ## Design Overview
 
