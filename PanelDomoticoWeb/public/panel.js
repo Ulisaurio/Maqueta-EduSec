@@ -323,27 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </section>`,
 
-            energia: () => `
-            <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="zap"></i>Alimentación</h3>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Fuente principal del sistema">
-                  <div class="flex items-center gap-2"><i data-feather="zap" class="text-xl"></i><h4 class="font-bold">Fuente de Alimentación</h4></div>
-                  <p class="text-sm"><span id="mainsStatus" class="font-medium">--</span></p>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
-                  <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
-                  <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
-                    <div id="voltageBar" class="bg-[#1683d8] h-4 rounded-full" style="width: 0%"></div>
-                  </div>
-                  <p class="text-sm"><span id="voltageLevel" class="font-medium">--</span></p>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Consumo aproximado en amperios">
-                  <div class="flex items-center gap-2"><i data-feather="cpu" class="text-xl"></i><h4 class="font-bold">Consumo</h4></div>
-                  <p class="text-sm"><span id="powerConsumption" class="font-medium">--</span></p>
-                </div>
-              </div>
-            </section>`,
 
             cuentas: () => `
             <section class="space-y-6">
@@ -369,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
             ["monitoreo", "eye", "Monitoreo"],
-            ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
         ];
