@@ -102,6 +102,9 @@ await cargarComandos();
 
 // ———————— RUTA PARA DESCARGAR LOGS EN CSV ————————
 app.get('/logs/:date/csv', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
     const { date } = req.params;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return res.status(400).json({ msg: 'Fecha inválida' });
