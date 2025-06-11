@@ -43,3 +43,20 @@ lines wired to pins 51–52 as shown above.
 | Buzzer                  | 5 V |
 | RGB LED                 | 5 V |
 | Fingerprint reader      | 5 V |
+
+## Troubleshooting
+
+If the RFID reader does not detect cards or the fingerprint sensor appears
+missing, verify the following:
+
+1. **Power connections** – The MFRC522 module must be powered from 3.3 V. The
+   fingerprint sensor uses the 5 V pin.
+2. **Signal wiring** – Connect the RC522's MOSI/MISO/SCK lines to pins
+   51/50/52 on the Mega and its SDA line to pin 10. The fingerprint sensor's
+   TX pin goes to RX1 (pin 19) and its RX pin to TX1 (pin 18).
+3. **Serial commands** – Reading either module requires sending the commands
+   `rfid` or `huella` (or `enrolar <id>`/`borrar <id>`). You can do this from
+   the web interface or a serial terminal. The firmware will report
+   "RFID listo"/"Sensor de huella listo" on startup when each peripheral is
+   detected. Running `rfid` or `huella` also retries initialization if the
+   module was not found at boot.

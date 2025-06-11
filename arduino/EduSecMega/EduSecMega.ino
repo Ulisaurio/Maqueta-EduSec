@@ -27,6 +27,43 @@ DallasTemperature sensors(&oneWire);
 #define CMD_BUF_SIZE 64
 char    cmdBuffer[CMD_BUF_SIZE];
 
+// Flags set after detecting each peripheral during setup()
+bool    fingerPresent = false;
+bool    rfidPresent   = false;
+
+bool ensureFingerprintReady() {
+  if (fingerPresent) return true;
+
+  Serial1.begin(57600);
+  finger.begin(57600);
+  fingerPresent = finger.verifyPassword();
+  if (!fingerPresent) {
+    Serial1.end();
+    Serial1.begin(9600);
+    finger.begin(9600);
+    fingerPresent = finger.verifyPassword();
+  }
+  if (fingerPresent) Serial.println(F("Sensor de huella listo"));
+  else Serial.println(F("⚠️ Huella no detectada"));
+  return fingerPresent;
+}
+
+bool ensureRfidReady() {
+  if (rfidPresent) return true;
+
+  SPI.begin();
+  rfid.PCD_Init();
+  byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+  if (ver == 0x00 || ver == 0xFF) {
+    Serial.println(F("⚠️ RFID no detectado"));
+    rfidPresent = false;
+  } else {
+    Serial.println(F("RFID listo"));
+    rfidPresent = true;
+  }
+  return rfidPresent;
+}
+
 // Helper to set RGB LED
 const bool COMMON_CATHODE = true;
 void setRGB(uint8_t r, uint8_t g, uint8_t b) {
@@ -50,12 +87,8 @@ void setup() {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
 
-  Serial1.begin(57600);
-  finger.begin(57600);
-  if (!finger.verifyPassword()) Serial.println(F("⚠️ Huella no detectada"));
-
-  SPI.begin();
-  rfid.PCD_Init();
+  ensureFingerprintReady();
+  ensureRfidReady();
 
   sensors.begin();
 
@@ -99,6 +132,7 @@ uint8_t borrarHuella(uint8_t id) {
 }
 
 bool verificarHuella() {
+  if (!ensureFingerprintReady()) return false;
   if (finger.getImage() != FINGERPRINT_OK) return false;
   if (finger.image2Tz() != FINGERPRINT_OK) return false;
   if (finger.fingerFastSearch() != FINGERPRINT_OK) return false;
@@ -147,18 +181,27 @@ void loop() {
     Serial.println(F("Acceso principal cerrado"));
   }
   else if (strncmp(cmd, "enrolar ", 8) == 0) {
-    int id = atoi(cmd + 8);
-    uint8_t r = enrolarHuella(id);
-    if (r == 0) Serial.println(F("Huella enrolada"));
-    else Serial.println(F("Error enrolando"));
+    if (!ensureFingerprintReady()) {
+      Serial.println(F("Sensor de huella no disponible"));
+    } else {
+      int id = atoi(cmd + 8);
+      uint8_t r = enrolarHuella(id);
+      if (r == 0) Serial.println(F("Huella enrolada"));
+      else Serial.println(F("Error enrolando"));
+    }
   }
   else if (strncmp(cmd, "borrar ", 7) == 0) {
-    int id = atoi(cmd + 7);
-    if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
-    else Serial.println(F("Error borrando"));
+    if (!ensureFingerprintReady()) {
+      Serial.println(F("Sensor de huella no disponible"));
+    } else {
+      int id = atoi(cmd + 7);
+      if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
+      else Serial.println(F("Error borrando"));
+    }
   }
   else if (strcmp(cmd, "huella") == 0) {
-    if (verificarHuella()) Serial.println(F("Huella válida"));
+    if (!ensureFingerprintReady()) Serial.println(F("Sensor de huella no disponible"));
+    else if (verificarHuella()) Serial.println(F("Huella válida"));
     else Serial.println(F("Huella no válida"));
   }
   else if (strcmp(cmd, "distancia") == 0) {
@@ -177,7 +220,10 @@ void loop() {
     Serial.println(v);
   }
   else if (strcmp(cmd, "rfid") == 0) {
-    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    if (!ensureRfidReady()) {
+      Serial.println(F("RFID no disponible"));
+    }
+    else if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
       Serial.print(F("UID: "));
       for (byte i = 0; i < rfid.uid.size; i++) {
         if (rfid.uid.uidByte[i] < 0x10) Serial.print('0');
@@ -191,14 +237,18 @@ void loop() {
     }
   }
   else if (strcmp(cmd, "listar_huellas") == 0) {
-    String listado = "";
-    for (uint16_t i = 1; i <= 200; i++) {
-      if (finger.loadModel(i) == FINGERPRINT_OK) {
-        if (listado.length() > 0) listado += ',';
-        listado += String(i);
+    if (!ensureFingerprintReady()) {
+      Serial.println(F("Sensor de huella no disponible"));
+    } else {
+      String listado = "";
+      for (uint16_t i = 1; i <= 200; i++) {
+        if (finger.loadModel(i) == FINGERPRINT_OK) {
+          if (listado.length() > 0) listado += ',';
+          listado += String(i);
+        }
       }
+      Serial.println(listado);
     }
-    Serial.println(listado);
   }
   else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
