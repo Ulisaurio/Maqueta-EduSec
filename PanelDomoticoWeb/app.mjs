@@ -6,7 +6,7 @@ import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { getDb, initDb } from './db.js';
-import { isArduinoAvailable } from './util/sendSerial.mjs';
+import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
@@ -197,6 +197,45 @@ app.get('/huellas', authenticateToken, async (req, res) => {
         return res.json(list);
     } catch (err) {
         console.error('Error en /huellas:', err);
+        return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Administrar huellas ---------
+app.post('/huellas', authenticateToken, async (req, res) => {
+    const { usuario_id, huella_id } = req.body;
+    if (!usuario_id || !huella_id) {
+        return res.status(400).json({ msg: 'usuario_id y huella_id requeridos' });
+    }
+    try {
+        const resp = await sendSerial(`enrolar ${huella_id}`);
+        await db.run(
+            `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
+            [usuario_id, huella_id]
+        );
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', `usuario:${usuario_id}, huella:${huella_id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
+    } catch (err) {
+        console.error('Error en POST /huellas:', err);
+        return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.delete('/huellas/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resp = await sendSerial(`borrar ${id}`);
+        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
+    } catch (err) {
+        console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
 });
