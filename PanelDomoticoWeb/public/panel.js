@@ -281,6 +281,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${moduleCard('RFID Reader')}
                 ${moduleCard('Ultrasonido')}
                 ${moduleCard('Buzzer')}
+                ${moduleCard('Huella Digital')}
+                ${moduleCard('Sensor Temp')}
+                ${moduleCard('RGB LED')}
               </div>
             </section>`,
 
@@ -605,7 +608,10 @@ const applyBtnStyle = () => {};
             'PIR Sensor': 'pir',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
-            'Buzzer': 'buzzer_status'
+            'Buzzer': 'buzzer_status',
+            'Huella Digital': 'huella',
+            'Sensor Temp': 'leertemp',
+            'RGB LED': 'rgb_off'
         };
 
         let moduleInterval;
