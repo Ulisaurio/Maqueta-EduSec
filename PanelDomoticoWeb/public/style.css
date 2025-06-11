@@ -85,13 +85,20 @@ body {
     outline-offset: 2px;
 }
 
-/* botones pequeños para acciones en tabla de usuarios */
+/* botones pequeños para acciones en tablas y menús */
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* alias para compatibilidad */
 .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
 }
 
 .btn-danger {
+    background-image: none;
     background-color: #dc2626;
     color: #fff;
 }
