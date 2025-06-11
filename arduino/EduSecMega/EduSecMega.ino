@@ -9,14 +9,14 @@
 #define RELAY_PIN    4
 #define PIR_PIN      2
 #define TRIG_PIN     8
-#define ECHO_PIN     9
-#define SDA_PIN      10
-#define RST_PIN      11
+#define ECHO_PIN     5
+#define SDA_PIN      10          // SS
+#define RST_PIN      9           // Reset
 #define BUZZER_PIN   7
 #define LED_R        3
-#define LED_G        5
+#define LED_G        44          // PWM safe on Mega
 #define LED_B        6
-// Fingerprint sensor on Serial1 (RX1=19, TX1=18)
+// Fingerprint sensor on Serial1 (TX sensor→19, RX sensor←18, 5V)
 
 // ----------------------------------------------------------
 Adafruit_Fingerprint finger(&Serial1);  // uses hardware Serial1
@@ -55,8 +55,12 @@ void setup() {
   digitalWrite(RELAY_PIN, HIGH);
 
   Serial1.begin(57600);
+  delay(200);               // allow sensor to power up
   finger.begin(57600);
-  fingerPresent = finger.verifyPassword();
+  for (uint8_t i = 0; i < 3 && !fingerPresent; i++) {
+    fingerPresent = finger.verifyPassword();
+    if (!fingerPresent) delay(200);
+  }
   if (fingerPresent) {
     Serial.println(F("🟢 Sensor de huella detectado"));
   } else {
