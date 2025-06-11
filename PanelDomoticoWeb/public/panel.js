@@ -341,11 +341,12 @@ document.addEventListener("DOMContentLoaded", () => {
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <label for="serialPort" class="flex-1">Puerto Serie:</label>
-                    <input id="serialPort" type="text" class="input-field w-32">
-                    <button id="applySerialPort" class="btn btn-sm">Aplicar</button>
-                  </div>
+                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="serialPort" class="flex-1">Puerto Serie:</label>
+                      <input id="serialPort" type="text" class="input-field w-40" />
+                    </div>
+                  </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                 </div>
               </div>
@@ -983,6 +984,22 @@ const applyBtnStyle = () => {};
             } else if (e.target.closest('#testBuzzerBtn')) {
                 cmd('alarm');
             } else if (e.target.closest('#savePrefsBtn')) {
+                const port = document.getElementById('serialPort').value.trim();
+                if (port) {
+                    try {
+                        await api('/settings/serial-port', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ serialPort: port })
+                        });
+                        await api('/status/arduino').then(s => {
+                            if (!s.available) showArduinoAlert();
+                        });
+                    } catch (err) {
+                        toast(err.message);
+                        return;
+                    }
+                }
                 toast('Preferencias guardadas');
             } else if (e.target.closest('#backupBtn')) {
                 toast('Copia de seguridad creada');
@@ -992,15 +1009,6 @@ const applyBtnStyle = () => {};
                 toast('Caché limpiada');
             } else if (e.target.closest('#applySensorInterval')) {
                 toast('Intervalo aplicado');
-            } else if (e.target.closest('#applySerialPort')) {
-                const port = document.getElementById('serialPort').value.trim();
-                if (port) {
-                    try {
-                        await api('/settings/serial-port', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serialPort: port }) });
-                        toast('Puerto actualizado');
-                        await api('/status/arduino').then(s => { if (!s.available) showArduinoAlert(); });
-                    } catch (err) { toast(err.message); }
-                }
             } else if (e.target.closest('#applySessionTimeout')) {
                 toast('Tiempo de espera actualizado');
             } else if (e.target.closest('#updateBtn')) {
