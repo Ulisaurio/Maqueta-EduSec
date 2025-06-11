@@ -168,14 +168,20 @@ body {
 /* Layout for module cards */
 .module-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
     gap: 1.5rem;
 }
 
 /* Sensor/module card enhancements */
 .module-card {
     border-radius: 0.75rem;
-    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+    padding: 1rem;
+    transition: background-color .2s, border-color .2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 15rem;
 }
 
 .module-status {
@@ -183,29 +189,62 @@ body {
     align-items: center;
     gap: 0.25rem;
     font-weight: 500;
+    font-size: 0.85rem;
 }
 
 .module-ok {
-    background-color: #4caf50; /* success color */
-    color: white;
+    background-color: #1e4426;
+    border-color: #28a745;
+    color: #28a745;
 }
 
 .module-fail {
-    background-color: #f44336; /* error color */
-    color: white;
+    background-color: #451717;
+    border-color: #dc3545;
+    color: #dc3545;
 }
 
 .verify-btn {
-    transition: all 0.2s ease-in-out;
+    transition: box-shadow .2s, transform .2s;
 }
 
 .verify-btn:hover {
-    filter: brightness(1.05);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
 }
 
 .verify-btn:active {
     transform: scale(0.97);
 }
 
+
+
+/* Status pills */
+.status {
+    border-radius: 12px;
+    padding: 0.2rem 0.6rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+.status.operational {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+}
+.status.faulty {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.module-icon {
+    transition: transform .2s;
+    stroke-width: 2;
+}
+.module-card:hover .module-icon {
+    transform: scale(1.05);
+}
+
+.module-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
 

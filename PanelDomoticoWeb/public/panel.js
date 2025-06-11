@@ -24,16 +24,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function moduleCard(name, status) {
             const ok = status.toUpperCase() !== 'NO';
-            const label = ok ? 'Operativo' : 'Fallo';
-            const icon = ok ? '✅' : '❌';
             const cls = ok ? 'module-ok' : 'module-fail';
+            const stateCls = ok ? 'operational' : 'faulty';
+            const label = ok ? 'Operativo' : 'Fallo';
             return `
-            <div class="relative">
-              <div class="module-card ${cls} shadow p-6 space-y-2">
-                <div class="flex items-center gap-2"><i data-feather="cpu"></i><h4 class="font-bold">${name}</h4></div>
-                <div class="module-status text-sm"><span class="text-lg">${icon}</span><span>${label}</span></div>
+            <div class="module-card ${cls} shadow">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-feather="cpu" class="module-icon"></i>
+                  <h4 class="module-title">${name}</h4>
+                </div>
+                <span class="status ${stateCls}">${label}</span>
               </div>
-              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 btn btn-sm verify-btn">Verificar</button>
+              <button onclick="verifyModule('${name}', this)" class="verify-btn btn btn-sm mt-4 self-end">Verificar</button>
             </div>`;
         }
 
