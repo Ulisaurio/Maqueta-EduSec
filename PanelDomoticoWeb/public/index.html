@@ -38,6 +38,14 @@
         <div class="text-white text-xl animate-pulse">Cargando panel…</div>
     </div>
 
+    <!-- Alerta Arduino -->
+    <div id="arduinoAlert" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="alert-critical p-6 rounded-lg shadow w-80 text-center space-y-4">
+            <p class="text-lg font-semibold">⚠️ Arduino no conectado</p>
+            <button id="arduinoAlertClose" class="btn btn-danger w-full">Cerrar</button>
+        </div>
+    </div>
+
     <!-- PANEL PRINCIPAL -->
     <div id="panel" class="hidden h-full flex overflow-hidden">
         <!-- SIDEBAR -->
