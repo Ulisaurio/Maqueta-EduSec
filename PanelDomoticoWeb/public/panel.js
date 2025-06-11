@@ -496,19 +496,9 @@ const applyBtnStyle = () => {};
             if (t1) t1.textContent = txt;
             if (t2) t2.textContent = txt;
         }
-        function updateVoltage(v) {
-            const bar = document.getElementById('voltageBar');
-            const lvl = document.getElementById('voltageLevel');
-            if (bar) bar.style.width = v === null ? '0%' : `${Math.min(v,100)}%`;
-            if (lvl) lvl.textContent = v === null ? '--' : `${v}V`;
-        }
         function updateConsumption(v) {
             const el = document.getElementById('powerConsumption');
             if (el) el.textContent = v === null ? '--' : `${v}A`;
-        }
-        function updateMains(v) {
-            const el = document.getElementById('mainsStatus');
-            if (el) el.textContent = v === null ? '--' : v;
         }
         function modulesSummary() {
             const cards = document.querySelectorAll('.module-grid .module-card');
@@ -544,22 +534,6 @@ const applyBtnStyle = () => {};
             }
             updateHistoryDisplay();
         }
-        async function refreshVoltage() {
-            try {
-                const data = await api('/comando/voltaje');
-                const v = parseNumber(data.resultado);
-                if (v !== null) {
-                    updateVoltage(v);
-                } else {
-                    updateVoltage(null);
-                }
-                if (data.resultado) updateMains(data.resultado);
-            } catch (err) {
-                toast(err.message);
-                updateVoltage(null);
-                updateMains(null);
-            }
-        }
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
@@ -576,10 +550,8 @@ const applyBtnStyle = () => {};
         }
         function startPolling() {
             refreshTemp();
-            refreshVoltage();
             refreshConsumption();
             setInterval(refreshTemp, 10000);
-            setInterval(refreshVoltage, 15000);
             setInterval(refreshConsumption, 15000);
         }
         async function refreshTemp() {
@@ -609,22 +581,6 @@ const applyBtnStyle = () => {};
             }
             updateHistoryDisplay();
         }
-        async function refreshVoltage() {
-            try {
-                const data = await api('/comando/voltaje');
-                const v = parseNumber(data.resultado);
-                if (v !== null) {
-                    updateVoltage(v);
-                } else {
-                    updateVoltage(null);
-                }
-                if (data.resultado) updateMains(data.resultado);
-            } catch (err) {
-                toast(err.message);
-                updateVoltage(null);
-                updateMains(null);
-            }
-        }
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
@@ -641,10 +597,8 @@ const applyBtnStyle = () => {};
         }
         function startPolling() {
             refreshTemp();
-            refreshVoltage();
             refreshConsumption();
             setInterval(refreshTemp, 10000);
-            setInterval(refreshVoltage, 15000);
             setInterval(refreshConsumption, 15000);
         }
         function toggleFingerAdmin() {

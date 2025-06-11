@@ -115,10 +115,6 @@ long leerDistancia() {
   return pulseIn(ECHO_PIN, HIGH, 30000);
 }
 
-float leerVoltaje() {
-  int raw = analogRead(A0);
-  return raw * (5.0 / 1023.0);
-}
 
 void sonarAlarma() {
   for (int i = 0; i < 3; i++) {
@@ -208,12 +204,6 @@ void loop() {
       }
     }
     Serial.println(listado);
-  }
-  else if (strcmp(cmd, "voltaje") == 0) {
-    float v = leerVoltaje();
-    Serial.print(F("Voltaje: "));
-    Serial.print(v, 2);
-    Serial.println(F(" V"));
   }
   else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
