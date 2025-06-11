@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const panel = document.getElementById("panel");
     const loadingOverlay = document.getElementById("loadingOverlay");
     const toastContainer = document.getElementById("toastContainer");
+    const MAX_TOASTS = 3;
     const lblUser = document.getElementById("lblUser");
     const logoutBtn = document.getElementById("logoutBtn");
     const toggleSidebar = document.getElementById("toggleSidebar");
@@ -447,6 +448,9 @@ const applyBtnStyle = () => {};
 
         const toast = (msg, duration = 3000, dismissable = true,
                       cls = 'bg-slate-800 text-white', icon = null) => {
+            while (toastContainer.children.length >= MAX_TOASTS) {
+                toastContainer.removeChild(toastContainer.firstChild);
+            }
             const t = document.createElement('div');
             t.className = `toast ${cls} px-4 py-3 rounded-full shadow-lg flex items-center gap-2`;
             if (icon) {
@@ -532,27 +536,6 @@ const applyBtnStyle = () => {};
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
-                } else {
-                    updateTemp(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateTemp(null);
-            }
-            updateHistoryDisplay();
-        }
-        function startPolling() {
-            refreshTemp();
-            setInterval(refreshTemp, 10000);
-        }
-        async function refreshTemp() {
-            try {
-                const data = await api('/comando/leertemp');
-                const val = parseNumber(data.resultado);
-                if (val !== null) {
-                    updateTemp(val);
-                    tempHistory.push(val);
-                    if (tempHistory.length > 12) tempHistory.shift();
                     if (tempChart) {
                         const now = new Date();
                         const labels = tempHistory.map((_, i) => {
@@ -563,11 +546,13 @@ const applyBtnStyle = () => {};
                         tempChart.data.datasets[0].data = tempHistory;
                         tempChart.update();
                     }
+                    lastTempError = false;
                 } else {
                     updateTemp(null);
                 }
             } catch (err) {
-                toast(err.message);
+                if (!lastTempError) toast(err.message);
+                lastTempError = true;
                 updateTemp(null);
             }
             updateHistoryDisplay();
@@ -654,7 +639,7 @@ const applyBtnStyle = () => {};
 
        async function checkAllModules() {
            for (const mod in moduleActions) {
-               await verifyModule(mod, null, false);
+               await verifyModule(mod, null, false, false);
            }
        }
 
@@ -793,7 +778,7 @@ const applyBtnStyle = () => {};
             checkSensors();
             monitorInterval = setInterval(checkSensors, 3000);
         }
-        async function verifyModule(mod, btn, showChecking = true) {
+        async function verifyModule(mod, btn, showChecking = true, showToast = true) {
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner"></span>';
@@ -815,15 +800,15 @@ const applyBtnStyle = () => {};
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
                     ok = !!data.available;
-                    toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
+                    if (showToast) toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
                 } else {
                     const data = await api(`/comando/${accion}`);
-                    toast(`Resultado de ${mod}: ${data.resultado}`);
+                    if (showToast) toast(`Resultado de ${mod}: ${data.resultado}`);
                     ok = resultIsOk(data.resultado);
                 }
                 updateModuleCard(mod, ok);
             } catch (err) {
-                toast(err.message);
+                if (showToast) toast(err.message);
                 updateModuleCard(mod, false);
             } finally {
                 if (btn) {
@@ -839,6 +824,7 @@ const applyBtnStyle = () => {};
         let jwtToken = '';
         let tempHistory = [];
         let tempChart = null;
+        let lastTempError = false;
         let systemArmed = false;
         let monitorInterval = null;
         let buzzerTimeout = null;
