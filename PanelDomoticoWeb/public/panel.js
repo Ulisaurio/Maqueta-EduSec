@@ -377,7 +377,10 @@ document.addEventListener("DOMContentLoaded", () => {
         function initMenu() {
             const m = document.getElementById('menu');
             m.innerHTML = '';
+            const seen = new Set();
             menuDef.forEach(([id, ic, label]) => {
+                if (seen.has(id)) return; // evita duplicados
+                seen.add(id);
                 if (id === 'cuentas' && currentUser.role !== 'root') return;
                 const b = document.createElement('button');
                 b.dataset.sec = id;
@@ -823,7 +826,6 @@ const applyBtnStyle = () => {};
                 if (lastDoorOpen !== null) addSecurityLog('Ultrasonido sin respuesta');
                 lastDoorOpen = null;
             }
-            feather.replace();
         }
 
         function startSecurityMonitoring() {
