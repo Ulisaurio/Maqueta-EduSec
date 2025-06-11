@@ -38,6 +38,21 @@ await checkArduino();
 export default async function sendSerial(comando) {
     const cfg = await readConfig();
     const portPath = cfg.serialPort || 'COM5';
+    if (port && port.path !== portPath) {
+        await new Promise(res => {
+            if (port.isOpen) {
+                port.close(() => res());
+            } else {
+                res();
+            }
+        });
+        port = new SerialPort(portPath, { baudRate: 9600, autoOpen: false });
+        parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+        port.on('error', err => {
+            console.error('Error en el puerto serial:', err.message);
+        });
+        await checkArduino();
+    }
     if (!arduinoAvailable) {
         await checkArduino();
         if (!arduinoAvailable) {
