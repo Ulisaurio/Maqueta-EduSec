@@ -812,8 +812,14 @@ const applyBtnStyle = () => {};
             }
         }
 
-        function startSecurityMonitoring() {
+        async function startSecurityMonitoring() {
             clearInterval(monitorInterval);
+            try {
+                const data = await api('/system-state');
+                systemArmed = !!data.armed;
+            } catch (err) {
+                toast(err.message);
+            }
             updateSystemStateUI();
             updateBuzzerUI(false);
             renderSecurityLog();
@@ -1037,8 +1043,17 @@ const applyBtnStyle = () => {};
                     loadHuellas();
                 } catch (err) { toast(err.message); }
             } else if (e.target.closest('#toggleArmBtn')) {
-                systemArmed = !systemArmed;
-                updateSystemStateUI();
+                try {
+                    const data = await api('/system-state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ armed: !systemArmed })
+                    });
+                    systemArmed = !!data.armed;
+                    updateSystemStateUI();
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#testBuzzerBtn')) {
                 cmd('alarm');
             } else if (e.target.closest('#savePrefsBtn')) {

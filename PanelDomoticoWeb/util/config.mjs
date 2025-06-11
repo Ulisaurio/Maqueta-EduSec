@@ -6,7 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const configPath = path.join(__dirname, '..', 'config.json');
 
-const defaultConfig = { serialPort: process.env.SERIAL_PORT || 'COM5' };
+const defaultConfig = {
+  serialPort: process.env.SERIAL_PORT || 'COM5',
+  systemArmed: false
+};
 
 export async function readConfig() {
   try {
