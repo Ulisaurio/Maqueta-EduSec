@@ -8,6 +8,8 @@ import bcrypt from 'bcrypt';
 import { getDb, initDb } from './db.js';
 import { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
+import enrolarCmd from './comandos/enrolar.mjs';
+import borrarCmd from './comandos/borrar.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -198,6 +200,50 @@ app.get('/huellas', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error en /huellas:', err);
         return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.post('/huellas/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await enrolarCmd(parseInt(id));
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle)
+         VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', resultado.mensaje || JSON.stringify(resultado)]
+        );
+        return res.json({ accion: 'enrolar', resultado });
+    } catch (err) {
+        const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
+        console.error(`Error ejecutando comando 'enrolar':`, mensaje);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle)
+         VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', mensaje]
+        );
+        return res.json({ accion: 'enrolar', resultado: mensaje });
+    }
+});
+
+app.delete('/huellas/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await borrarCmd(parseInt(id));
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle)
+         VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', resultado.mensaje || JSON.stringify(resultado)]
+        );
+        return res.json({ accion: 'borrar', resultado });
+    } catch (err) {
+        const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
+        console.error(`Error ejecutando comando 'borrar':`, mensaje);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle)
+         VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', mensaje]
+        );
+        return res.json({ accion: 'borrar', resultado: mensaje });
     }
 });
 
