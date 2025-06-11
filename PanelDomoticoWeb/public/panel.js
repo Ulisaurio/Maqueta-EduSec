@@ -53,7 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return `
             <div class="relative h-full">
               <canvas id="sparklineChart" class="sparkline hidden"></canvas>
-              <div id="noHistoryMsg" class="flex items-center justify-center h-full text-sm text-slate-500">Historial no disponible...</div>
+              <div id="noHistoryMsg" class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 bg-slate-50/70 dark:bg-slate-700/30">
+                <i data-feather="bar-chart-2" class="w-4 h-4"></i>
+                <span class="text-sm">Historial no disponible…</span>
+              </div>
             </div>`;
         }
 
