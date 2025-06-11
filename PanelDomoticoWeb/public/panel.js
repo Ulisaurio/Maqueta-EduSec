@@ -52,19 +52,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function renderSparkline() {
             const ctx = document.getElementById('sparklineChart').getContext('2d');
-            if (ctx._chart) { ctx._chart.destroy(); }
-            const temps = [23, 24, 24, 25, 24, 23, 22, 23, 24, 25, 24, 23];
+            if (tempChart) tempChart.destroy();
             const now = new Date();
-            const labels = temps.map((_, i) => {
-                const d = new Date(now.getTime() - (temps.length - 1 - i) * 3600 * 1000);
+            const labels = tempHistory.map((_, i) => {
+                const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
                 return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             });
-            ctx._chart = new Chart(ctx, {
+            tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
                     datasets: [{
-                        data: temps,
+                        data: tempHistory,
                         borderColor: '#3b82f6',
                         borderWidth: 2,
                         pointRadius: 4,
@@ -388,8 +387,28 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const data = await api('/comando/leertemp');
                 const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) updateTemp(parseFloat(m[1]));
-            } catch (err) { toast(err.message); }
+                if (m) {
+                    const val = parseFloat(m[1]);
+                    updateTemp(val);
+                    tempHistory.push(val);
+                    if (tempHistory.length > 12) tempHistory.shift();
+                    if (tempChart) {
+                        const now = new Date();
+                        const labels = tempHistory.map((_, i) => {
+                            const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
+                            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        });
+                        tempChart.data.labels = labels;
+                        tempChart.data.datasets[0].data = tempHistory;
+                        tempChart.update();
+                    }
+                } else {
+                    updateTemp(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateTemp(null);
+            }
         }
         async function refreshVoltage() {
             try {
@@ -451,6 +470,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Variables globales
         let currentUser = null;
         let jwtToken = '';
+        let tempHistory = [];
+        let tempChart = null;
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
