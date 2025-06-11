@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { getDb, initDb } from './db.js';
 import { isArduinoAvailable } from './util/sendSerial.mjs';
+import { readConfig, writeConfig } from './util/config.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -203,6 +204,20 @@ app.get('/huellas', authenticateToken, async (req, res) => {
 // ———————— ESTADO DEL ARDUINO ————————
 app.get('/status/arduino', (req, res) => {
     res.json({ available: isArduinoAvailable() });
+});
+
+// --------- Ajustes del sistema ---------
+
+app.get('/settings/serial-port', async (req, res) => {
+    const cfg = await readConfig();
+    res.json({ serialPort: cfg.serialPort });
+});
+
+app.post('/settings/serial-port', async (req, res) => {
+    const { serialPort } = req.body;
+    if (!serialPort) return res.status(400).json({ msg: 'serialPort requerido' });
+    await writeConfig({ serialPort });
+    res.json({ msg: 'ok' });
 });
 
 // ———————— CRUD DE USUARIOS (/users) ————————

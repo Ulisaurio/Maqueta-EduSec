@@ -1,6 +1,7 @@
 // util/sendSerial.mjs
 import { SerialPort } from 'serialport';
 import { ReadlineParser } from '@serialport/parser-readline';
+import { readConfig } from './config.mjs';
 
 let port;
 let parser;
@@ -10,7 +11,8 @@ let arduinoAvailable = false;
  * Detect if the configured serial port exists.
  */
 export async function checkArduino() {
-    const path = process.env.SERIAL_PORT || 'COM5';
+    const cfg = await readConfig();
+    const path = cfg.serialPort || 'COM5';
     try {
         const ports = await SerialPort.list();
         arduinoAvailable = ports.some(p => p.path === path);
@@ -34,7 +36,8 @@ await checkArduino();
  * @returns {Promise<string>} Respuesta del Arduino como string
  */
 export default async function sendSerial(comando) {
-    const path = process.env.SERIAL_PORT || 'COM5';
+    const cfg = await readConfig();
+    const path = cfg.serialPort || 'COM5';
     if (!arduinoAvailable) {
         await checkArduino();
         if (!arduinoAvailable) {
