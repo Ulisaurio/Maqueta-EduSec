@@ -516,8 +516,26 @@ const applyBtnStyle = () => {};
         async function updateAccessTable(dateStr) {
             document.getElementById('accessContainer').innerHTML = await accessTableHTML(dateStr);
         }
-        function exportAccessCSV() {
-            toast('Exportando CSV... (simulado)');
+        async function exportAccessCSV() {
+            const date = document.getElementById('filterDate').value;
+            if (!date) return;
+            try {
+                const res = await fetch(`/logs/${date}/csv`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                if (!res.ok) throw new Error('Error exportando CSV');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logs_${date}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                toast(err.message);
+            }
         }
         const moduleActions = {
             'PIR Sensor': 'pir',

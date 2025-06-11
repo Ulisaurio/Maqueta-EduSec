@@ -99,6 +99,38 @@ async function cargarComandos() {
 }
 await cargarComandos();
 
+// ———————— RUTA PARA DESCARGAR LOGS EN CSV ————————
+app.get('/logs/:date/csv', authenticateToken, async (req, res) => {
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ msg: 'Fecha inválida' });
+    }
+    try {
+        const rows = await db.all(
+            `SELECT logs.timestamp, usuarios.username, logs.accion, logs.detalle
+               FROM logs
+               LEFT JOIN usuarios ON logs.usuario_id = usuarios.id
+              WHERE date(logs.timestamp) = ?
+           ORDER BY logs.timestamp ASC`,
+            [date]
+        );
+        const header = 'timestamp,username,accion,detalle\n';
+        const csv = header + rows.map(r => {
+            const ts = new Date(r.timestamp).toISOString();
+            const u = r.username || '';
+            const a = r.accion || '';
+            const d = (r.detalle || '').replace(/"/g, '""');
+            return `"${ts}","${u}","${a}","${d}"`;
+        }).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="logs_${date}.csv"`);
+        return res.send(csv);
+    } catch (err) {
+        console.error('Error en GET /logs/:date/csv:', err);
+        return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
 // ———————— RUTA PARA OBTENER LOGS POR FECHA ————————
 app.get('/logs/:date', authenticateToken, async (req, res) => {
     const { date } = req.params;
