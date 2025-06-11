@@ -271,9 +271,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </section>`;
             },
 
-            monitoreo: () => `
+            estatus: () => `
             <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Estatus</h3>
               <div class="module-grid">
                 ${moduleCard('Arduino', undefined, 'module-main')}
                 ${moduleCard('PIR Sensor')}
@@ -326,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const menuDef = [
             ["home", "home", "Inicio"],
             ["acceso", "lock", "Acceso principal"],
-            ["monitoreo", "activity", "Monitoreo"],
+            ["estatus", "activity", "Estatus"],
             ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
@@ -359,7 +359,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
-            if (id === 'monitoreo') startModuleMonitoring();
+            if (id === 'estatus') startModuleMonitoring();
         }
 
 
@@ -655,13 +655,11 @@ const applyBtnStyle = () => {};
             }
         }
 
-        function startModuleMonitoring() {
-            setCheckingStatuses();
-            setTimeout(() => {
-                checkAllModules();
-                clearInterval(moduleInterval);
-                moduleInterval = setInterval(checkAllModules, 60000);
-            }, 2000);
+       function startModuleMonitoring() {
+           setCheckingStatuses();
+            checkAllModules();
+            clearInterval(moduleInterval);
+            moduleInterval = setInterval(checkAllModules, 60000);
         }
         async function verifyModule(mod, btn) {
             if (btn) {
