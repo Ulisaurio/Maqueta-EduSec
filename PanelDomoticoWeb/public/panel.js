@@ -124,11 +124,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Usuario</th><th class="px-3 py-2 text-left">Huella ID</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th></tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                  <tr><td class="px-3 py-1">1</td><td class="px-3 py-1">H-001</td><td class="px-3 py-1"><button class="text-red-500 hover:underline">Eliminar</button></td></tr>
-                </tbody>
+                <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
             </div>`;
         }
@@ -303,8 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
-            if (id === 'monitoreo') startModuleMonitoring();
-            else clearInterval(moduleInterval);
+            if (id === 'acceso') loadHuellas();
         }
 
 
@@ -618,6 +615,26 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td class="px-3 py-1">
                     <button class="delUser btn btn-sm btn-danger" data-id="${u.id}">Eliminar</button>
                   </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function loadHuellas() {
+            try {
+                const ids = await api('/huellas');
+                renderHuellas(ids);
+            } catch {
+                toast('Error cargando huellas');
+            }
+        }
+
+        function renderHuellas(list) {
+            const tbody = document.getElementById('fingerTBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            list.forEach(id => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="px-3 py-1">${id}</td>`;
                 tbody.appendChild(tr);
             });
         }
