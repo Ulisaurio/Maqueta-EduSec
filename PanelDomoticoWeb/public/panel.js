@@ -519,6 +519,11 @@ const applyBtnStyle = () => {};
             return m ? parseFloat(m[1]) : null;
         }
 
+        function resultIsOk(str) {
+            if (!str) return false;
+            return !/(no disponible|error|timeout|sin respuesta)/i.test(str);
+        }
+
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
@@ -814,7 +819,7 @@ const applyBtnStyle = () => {};
                 } else {
                     const data = await api(`/comando/${accion}`);
                     toast(`Resultado de ${mod}: ${data.resultado}`);
-                    ok = /OK/i.test(data.resultado || '');
+                    ok = resultIsOk(data.resultado);
                 }
                 updateModuleCard(mod, ok);
             } catch (err) {
