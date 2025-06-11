@@ -104,19 +104,25 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
     const accion = req.params.accion;
     const fn = accionesMap[accion];
     if (!fn) {
-        return res.status(404).json({ error: `Acción '${accion}' no encontrada` });
+        return res.status(404).json({ msg: `Acción '${accion}' no encontrada` });
     }
     try {
         const resultado = await fn();
         await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle) 
+            `INSERT INTO logs (usuario_id, accion, detalle)
          VALUES (?, ?, ?)`,
             [req.user.id, accion, resultado.mensaje || JSON.stringify(resultado)]
         );
         return res.json({ accion, resultado });
     } catch (err) {
-        console.error(`Error ejecutando comando '${accion}':`, err);
-        return res.status(500).json({ error: 'Error interno al ejecutar comando.' });
+        const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
+        console.error(`Error ejecutando comando '${accion}':`, mensaje);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle)
+         VALUES (?, ?, ?)`,
+            [req.user.id, accion, mensaje]
+        );
+        return res.json({ accion, resultado: mensaje });
     }
 });
 
