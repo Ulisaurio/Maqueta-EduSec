@@ -260,6 +260,10 @@ body {
     background: rgba(220, 53, 69, 0.1);
     color: #dc3545;
 }
+.status.checking {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+}
 
 .module-icon {
     transition: transform .2s;
@@ -276,7 +280,7 @@ body {
 }
 
 .module-title {
-    font-weight: 700;
-    font-size: 1.1rem;
+    font-weight: 600;
+    font-size: 1rem;
 }
 

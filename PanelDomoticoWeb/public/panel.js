@@ -23,10 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function moduleCard(name, status) {
-            const ok = status.toUpperCase() !== 'NO';
-            const cls = ok ? 'module-ok' : 'module-fail';
-            const stateCls = ok ? 'operational' : 'faulty';
-            const label = ok ? 'Operativo' : 'Fallo';
+            let cls = '';
+            let stateCls = 'checking';
+            let label = 'Verificando...';
+            if (status) {
+                const ok = status.toUpperCase() !== 'NO';
+                cls = ok ? 'module-ok' : 'module-fail';
+                stateCls = ok ? 'operational' : 'faulty';
+                label = ok ? 'Operativo' : 'Fallo';
+            }
             return `
             <div class="module-card ${cls} shadow" data-module="${name}">
               <div class="flex items-start justify-between">
@@ -236,12 +241,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="module-grid">
-                ${moduleCard('PIR Sensor', 'OK')}
-                ${moduleCard('RFID Reader', 'OK')}
-                ${moduleCard('Ultrasonido', 'OK')}
-                ${moduleCard('Flama/Agua Sensor', 'NO')}
-                ${moduleCard('Buzzer', 'OK')}
-                ${moduleCard('Display LCD', 'NO')}
+                ${moduleCard('PIR Sensor')}
+                ${moduleCard('RFID Reader')}
+                ${moduleCard('Ultrasonido')}
+                ${moduleCard('Flama/Agua Sensor')}
+                ${moduleCard('Buzzer')}
+                ${moduleCard('Display LCD')}
               </div>
             </section>`,
 
@@ -561,6 +566,18 @@ const applyBtnStyle = () => {};
 
         let moduleInterval;
 
+        function setCheckingStatuses() {
+            document.querySelectorAll('.module-card').forEach(card => {
+                const span = card.querySelector('[data-status]');
+                card.classList.remove('module-ok', 'module-fail');
+                if (span) {
+                    span.classList.remove('operational', 'faulty');
+                    span.classList.add('checking');
+                    span.textContent = 'Verificando...';
+                }
+            });
+        }
+
         function updateModuleCard(mod, ok) {
             const card = document.querySelector(`.module-card[data-module="${mod}"]`);
             if (!card) return;
@@ -568,6 +585,7 @@ const applyBtnStyle = () => {};
             card.classList.toggle('module-ok', ok);
             card.classList.toggle('module-fail', !ok);
             if (span) {
+                span.classList.remove('checking');
                 span.classList.toggle('operational', ok);
                 span.classList.toggle('faulty', !ok);
                 span.textContent = ok ? 'Operativo' : 'Fallo';
@@ -581,6 +599,7 @@ const applyBtnStyle = () => {};
         }
 
         function startModuleMonitoring() {
+            setCheckingStatuses();
             checkAllModules();
             clearInterval(moduleInterval);
             moduleInterval = setInterval(checkAllModules, 60000);
@@ -593,6 +612,13 @@ const applyBtnStyle = () => {};
             const accion = moduleActions[mod];
             try {
                 if (!accion) throw new Error('No soportado');
+                const card = document.querySelector(`.module-card[data-module="${mod}"]`);
+                const span = card ? card.querySelector('[data-status]') : null;
+                if (span) {
+                    span.classList.add('checking');
+                    span.classList.remove('operational', 'faulty');
+                    span.textContent = 'Verificando...';
+                }
                 const data = await api(`/comando/${accion}`);
                 toast(`Resultado de ${mod}: ${data.resultado}`);
                 const ok = /OK/i.test(data.resultado || '');
