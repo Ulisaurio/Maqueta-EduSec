@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`;
         }
 
-        function moduleCard(name, status) {
+        function moduleCard(name, status, extraCls = '') {
             let cls = '';
             let stateCls = 'checking';
             let label = 'Verificando...';
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 label = ok ? 'Operativo' : 'Fallo';
             }
             return `
-            <div class="module-card ${cls} shadow" data-module="${name}">
+            <div class="module-card ${cls} shadow ${extraCls}" data-module="${name}">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2">
                   <i data-feather="cpu" class="module-icon"></i>
@@ -259,16 +259,15 @@ document.addEventListener("DOMContentLoaded", () => {
             </section>`;
             },
 
-            monitoreo: () => `
+            estatus: () => `
             <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Estatus</h3>
               <div class="module-grid">
+                ${moduleCard('Arduino', undefined, 'module-main')}
                 ${moduleCard('PIR Sensor')}
                 ${moduleCard('RFID Reader')}
                 ${moduleCard('Ultrasonido')}
-                ${moduleCard('Flama/Agua Sensor')}
                 ${moduleCard('Buzzer')}
-                ${moduleCard('Display LCD')}
               </div>
             </section>`,
 
@@ -315,7 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const menuDef = [
             ["home", "home", "Inicio"],
             ["acceso", "lock", "Acceso principal"],
-            ["monitoreo", "activity", "Monitoreo"],
+            ["estatus", "activity", "Estatus"],
             ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
@@ -348,7 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
-            if (id === 'monitoreo') startModuleMonitoring();
+            if (id === 'estatus') startModuleMonitoring();
         }
 
 
@@ -602,15 +601,15 @@ const applyBtnStyle = () => {};
             }
         }
         const moduleActions = {
+            'Arduino': 'arduino_status',
             'PIR Sensor': 'pir',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
-            'Flama/Agua Sensor': 'alarm',
-            'Buzzer': 'alarm',
-            'Display LCD': 'rgb_red'
+            'Buzzer': 'alarm'
         };
 
         let moduleInterval;
+        const delay = ms => new Promise(res => setTimeout(res, ms));
 
         function setCheckingStatuses() {
             document.querySelectorAll('.module-card').forEach(card => {
@@ -644,8 +643,8 @@ const applyBtnStyle = () => {};
             }
         }
 
-        function startModuleMonitoring() {
-            setCheckingStatuses();
+       function startModuleMonitoring() {
+           setCheckingStatuses();
             checkAllModules();
             clearInterval(moduleInterval);
             moduleInterval = setInterval(checkAllModules, 60000);
@@ -665,9 +664,17 @@ const applyBtnStyle = () => {};
                     span.classList.remove('operational', 'faulty');
                     span.textContent = 'Verificando...';
                 }
-                const data = await api(`/comando/${accion}`);
-                toast(`Resultado de ${mod}: ${data.resultado}`);
-                const ok = /OK/i.test(data.resultado || '');
+                await delay(2000);
+                let ok = false;
+                if (accion === 'arduino_status') {
+                    const data = await api('/status/arduino');
+                    ok = !!data.available;
+                    toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
+                } else {
+                    const data = await api(`/comando/${accion}`);
+                    toast(`Resultado de ${mod}: ${data.resultado}`);
+                    ok = /OK/i.test(data.resultado || '');
+                }
                 updateModuleCard(mod, ok);
             } catch (err) {
                 toast(err.message);
