@@ -12,6 +12,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleSidebar = document.getElementById("toggleSidebar");
     const content = document.getElementById("content");
     const clockNow = document.getElementById("clockNow");
+    const arduinoAlert = document.getElementById("arduinoAlert");
+    const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+
+    if (arduinoAlertClose) {
+        arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
+    }
+
+    const showArduinoAlert = () => {
+        if (arduinoAlert) arduinoAlert.classList.remove('hidden');
+    };
 
         // Generadores de tarjetas
         function card(icon, title, value, cls = "") {
@@ -673,7 +683,7 @@ const applyBtnStyle = () => {};
                     startPolling();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
-                        if (!s.available) toast('⚠️ Arduino no conectado', null);
+                        if (!s.available) showArduinoAlert();
                     }).catch(() => {});
                 }, 600);
             } catch (err) {

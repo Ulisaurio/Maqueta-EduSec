@@ -230,6 +230,12 @@ body {
     color: #dc3545;
 }
 
+.alert-critical {
+    background-color: #451717;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+}
+
 .verify-btn {
     transition: box-shadow .2s, transform .2s;
 }
