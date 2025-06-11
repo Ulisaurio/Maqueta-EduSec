@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadingOverlay = document.getElementById("loadingOverlay");
     const toastContainer = document.getElementById("toastContainer");
     const lblUser = document.getElementById("lblUser");
-    const themeBtn = document.getElementById("themeBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const toggleSidebar = document.getElementById("toggleSidebar");
     const content = document.getElementById("content");
@@ -474,10 +473,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Otros botones
-        themeBtn.onclick = () => {
-            document.documentElement.classList.toggle('dark');
-            feather.replace();
-        };
         logoutBtn.onclick = () => location.reload();
         toggleSidebar.onclick = () => {
             document.body.classList.toggle('sidebar-collapsed');
