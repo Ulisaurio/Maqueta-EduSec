@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const showArduinoReminder = () => {
-        toast('Arduino no conectado', 5000, true, 'warning-toast', 'alert-triangle');
+        toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
     };
 
         // Generadores de tarjetas
