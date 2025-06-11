@@ -165,3 +165,30 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* Layout for module cards */
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1.5rem;
+}
+
+/* Sensor/module card enhancements */
+.module-card {
+    border-radius: 0.75rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.verify-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.verify-btn:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.verify-btn:active {
+    transform: scale(0.97);
+}
+
+

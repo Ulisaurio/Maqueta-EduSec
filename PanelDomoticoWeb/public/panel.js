@@ -24,12 +24,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function moduleCard(name, status) {
-            const ok = !status.startsWith('NO');
+            const ok = status.toUpperCase() !== 'NO';
+            const label = ok ? 'Operativo' : 'Fallo';
+            const icon = ok ? '✅' : '❌';
             const cls = ok ? 'border-green-400 text-green-700 bg-green-50' : 'border-red-400 text-red-700 bg-red-50';
             return `
             <div class="relative">
-              ${card('cpu', name, status, `${cls} border`)}
-              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 btn btn-sm">Verificar</button>
+              ${card('cpu', name, `<span class=\"flex items-center gap-1\">${icon} ${label}</span>`, `${cls} border module-card`)}
+              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 btn btn-sm verify-btn">Verificar</button>
             </div>`;
         }
 
@@ -213,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
             monitoreo: `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div class="module-grid">
                 ${moduleCard('PIR Sensor', 'OK')}
                 ${moduleCard('RFID Reader', 'OK')}
                 ${moduleCard('Ultrasonido', 'OK')}
