@@ -42,3 +42,5 @@ respective `README.md` files for pin mapping and library requirements.
 The logo file `logo_edusec.png` is not included in this repository.
 After cloning the project, manually copy it into:
 `PanelDomoticoWeb/public/img/`
+- The SQLite database now stores timestamps in local time.
+
