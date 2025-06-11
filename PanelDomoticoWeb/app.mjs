@@ -185,19 +185,43 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
     }
 });
 
-// ———————— LISTAR HUELLAS ————————
+// ———————— GESTIÓN DE HUELLAS ————————
 app.get('/huellas', authenticateToken, async (req, res) => {
-    const fn = accionesMap['listar_huellas'];
-    if (!fn) {
-        return res.status(500).json({ msg: 'Comando no soportado' });
-    }
     try {
-        const resp = await fn();
-        const list = resp ? resp.split(',').filter(Boolean).map(n => parseInt(n)) : [];
-        return res.json(list);
+        const rows = await db.all(
+            `SELECT h.huella_id, h.usuario_id, u.username
+               FROM huellas h
+               JOIN usuarios u ON h.usuario_id = u.id
+           ORDER BY h.huella_id`
+        );
+        res.json(rows);
     } catch (err) {
-        console.error('Error en /huellas:', err);
-        return res.status(500).json({ msg: 'Error interno' });
+        console.error('Error en GET /huellas:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.post('/huellas', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { usuario_id } = req.body;
+    if (!usuario_id) return res.status(400).json({ msg: 'usuario_id requerido' });
+    const fn = accionesMap['enrolar'];
+    if (!fn) return res.status(500).json({ msg: 'Comando no soportado' });
+    try {
+        const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
+        const nextId = (row && row.max ? row.max : 0) + 1;
+        const resp = await fn(nextId);
+        await db.run('INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)', [usuario_id, nextId]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', resp.mensaje || JSON.stringify(resp)]
+        );
+        res.json({ huella_id: nextId, usuario_id });
+    } catch (err) {
+        console.error('Error en POST /huellas:', err);
+        res.status(500).json({ msg: 'Error interno' });
     }
 });
 
