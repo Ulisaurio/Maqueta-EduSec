@@ -186,12 +186,12 @@ body {
 }
 
 .module-ok {
-    background-color: #22c55e; /* green-500 */
+    background-color: #4caf50; /* success color */
     color: white;
 }
 
 .module-fail {
-    background-color: #ef4444; /* red-500 */
+    background-color: #f44336; /* error color */
     color: white;
 }
 
