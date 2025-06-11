@@ -344,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
               </details>
 
-              <details class="details-card">
+              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
                 <summary><span class="flex items-center gap-2">📂 Gestión de Datos (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
                 <div class="p-4 flex flex-wrap gap-2">
                   <button id="backupBtn" class="btn flex-auto sm:flex-none">Copia de Seguridad</button>
@@ -353,23 +353,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
               </details>
 
-              <details class="details-card">
+              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
                 <summary><span class="flex items-center gap-2">🧪 Parámetros del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
                 <div class="p-4 space-y-4">
                   <div class="flex flex-wrap items-center gap-2">
                     <label for="sensorInterval" class="flex-1">Intervalo de Sondeo de Sensores (segundos):</label>
-                    <input id="sensorInterval" type="number" class="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">
+                    <input id="sensorInterval" type="number" class="input-field w-24">
                     <button id="applySensorInterval" class="btn btn-sm">Aplicar</button>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <label for="sessionTimeout" class="flex-1">Tiempo de Espera de Sesión Inactiva (minutos):</label>
-                    <input id="sessionTimeout" type="number" class="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">
+                    <input id="sessionTimeout" type="number" class="input-field w-24">
                     <button id="applySessionTimeout" class="btn btn-sm">Aplicar</button>
                   </div>
                 </div>
               </details>
 
-              <details class="details-card">
+              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
                 <summary><span class="flex items-center gap-2">🧰 Mantenimiento del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
                 <div class="p-4 flex flex-wrap gap-2">
                   <button id="updateBtn" class="btn flex-auto sm:flex-none">Buscar Actualizaciones</button>
@@ -916,6 +916,7 @@ const applyBtnStyle = () => {};
         let lastPir = null;
         let lastDoorOpen = null;
         const securityLogs = [];
+        let simulatedMode = true;
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
