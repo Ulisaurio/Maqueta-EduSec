@@ -130,7 +130,7 @@ export async function updateHuella(id, { usuario_id, huella_id }) {
     return db.run(`UPDATE huellas SET ${updates.join(', ')} WHERE id = ?`, params);
 }
 
-export async function deleteHuella(id) {
+export async function deleteHuella(huellaId) {
     const db = await getDb();
-    return db.run(`DELETE FROM huellas WHERE id = ?`, [id]);
+    return db.run('DELETE FROM huellas WHERE huella_id = ?', [huellaId]);
 }
