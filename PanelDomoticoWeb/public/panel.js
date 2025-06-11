@@ -26,10 +26,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const ok = status.toUpperCase() !== 'NO';
             const label = ok ? 'Operativo' : 'Fallo';
             const icon = ok ? '✅' : '❌';
-            const cls = ok ? 'border-green-400 text-green-700 bg-green-50' : 'border-red-400 text-red-700 bg-red-50';
+            const cls = ok ? 'module-ok' : 'module-fail';
             return `
             <div class="relative">
-              ${card('cpu', name, `<span class=\"flex items-center gap-1\">${icon} ${label}</span>`, `${cls} border module-card`)}
+              <div class="module-card ${cls} shadow p-6 space-y-2">
+                <div class="flex items-center gap-2"><i data-feather="cpu"></i><h4 class="font-bold">${name}</h4></div>
+                <div class="module-status text-sm"><span class="text-lg">${icon}</span><span>${label}</span></div>
+              </div>
               <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 btn btn-sm verify-btn">Verificar</button>
             </div>`;
         }
