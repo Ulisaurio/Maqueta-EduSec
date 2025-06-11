@@ -6,8 +6,10 @@ import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { getDb, initDb } from './db.js';
-import { isArduinoAvailable } from './util/sendSerial.mjs';
+import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
+import enrolarCmd from './comandos/enrolar.mjs';
+import borrarCmd from './comandos/borrar.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -166,12 +168,18 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
         return res.status(404).json({ msg: `Acción '${accion}' no encontrada` });
     }
     try {
-        const resultado = await fn();
+        const id = req.query.id ? parseInt(req.query.id, 10) : undefined;
+        const resultado = await fn(id);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle)
          VALUES (?, ?, ?)`,
             [req.user.id, accion, resultado.mensaje || JSON.stringify(resultado)]
         );
+        if (accion === 'enrolar' && typeof id !== 'undefined') {
+            await addHuella({ usuario_id: req.user.id, huella_id: id });
+        } else if (accion === 'borrar' && typeof id !== 'undefined') {
+            await deleteHuella(id);
+        }
         return res.json({ accion, resultado });
     } catch (err) {
         const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
@@ -222,6 +230,44 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error en POST /huellas:', err);
         res.status(500).json({ msg: 'Error interno' });
+    }
+});
+// --------- Administrar huellas ---------
+app.post('/huellas', authenticateToken, async (req, res) => {
+    const { usuario_id, huella_id } = req.body;
+    if (!usuario_id || !huella_id) {
+        return res.status(400).json({ msg: 'usuario_id y huella_id requeridos' });
+    }
+    try {
+        const resp = await sendSerial(`enrolar ${huella_id}`);
+        await db.run(
+            `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
+            [usuario_id, huella_id]
+        );
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'enrolar', `usuario:${usuario_id}, huella:${huella_id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
+    } catch (err) {
+        console.error('Error en POST /huellas:', err);
+        return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.delete('/huellas/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resp = await sendSerial(`borrar ${id}`);
+        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
+    } catch (err) {
+        console.error('Error en DELETE /huellas/:id:', err);
+        return res.status(500).json({ msg: 'Error interno' });
     }
 });
 
