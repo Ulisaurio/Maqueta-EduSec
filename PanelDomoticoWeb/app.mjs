@@ -221,11 +221,15 @@ app.post('/huellas', authenticateToken, async (req, res) => {
         const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
         const nextId = (row && row.max ? row.max : 0) + 1;
         const resp = await fn(nextId);
-        await db.run('INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)', [usuario_id, nextId]);
+        const ok = /enrolada/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-            [req.user.id, 'enrolar', resp.mensaje || JSON.stringify(resp)]
+            [req.user.id, ok ? 'enrolar' : 'enrolar_error', resp]
         );
+        if (!ok) {
+            return res.status(500).json({ msg: resp });
+        }
+        await db.run('INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)', [usuario_id, nextId]);
         res.json({ huella_id: nextId, usuario_id });
     } catch (err) {
         console.error('Error en POST /huellas:', err);
