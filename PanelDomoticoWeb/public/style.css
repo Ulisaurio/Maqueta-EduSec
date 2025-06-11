@@ -194,20 +194,24 @@ body {
 /* Layout for module cards */
 .module-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 1.5rem;
 }
 
 /* Sensor/module card enhancements */
 .module-card {
     border-radius: 0.75rem;
-    border: 1px solid transparent;
     padding: 1rem;
-    transition: background-color .2s, border-color .2s;
+    transition: background-color .2s;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-width: 13rem;
+}
+
+.module-main {
     min-width: 15rem;
+    box-shadow: 0 0 0 2px var(--primary-color);
 }
 
 .module-status {
@@ -220,13 +224,11 @@ body {
 
 .module-ok {
     background-color: rgba(67, 176, 42, 0.1);
-    border-color: var(--success-color);
     color: var(--success-color);
 }
 
 .module-fail {
     background-color: #451717;
-    border-color: #dc3545;
     color: #dc3545;
 }
 
