@@ -480,9 +480,8 @@ const applyBtnStyle = () => {};
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
