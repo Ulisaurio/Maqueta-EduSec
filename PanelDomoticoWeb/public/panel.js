@@ -12,6 +12,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleSidebar = document.getElementById("toggleSidebar");
     const content = document.getElementById("content");
     const clockNow = document.getElementById("clockNow");
+    const arduinoAlert = document.getElementById("arduinoAlert");
+    const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+
+    if (arduinoAlertClose) {
+        arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
+    }
+
+    const showArduinoAlert = () => {
+        if (arduinoAlert) arduinoAlert.classList.remove('hidden');
+    };
+
+    const showArduinoReminder = () => {
+        toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
+    };
 
         // Generadores de tarjetas
         function card(icon, title, value, cls = "") {
@@ -327,19 +341,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = (msg, duration = 3000) => {
+        const toast = (msg, duration = 3000, dismissable = true,
+                      cls = 'bg-slate-800 text-white', icon = null) => {
             const t = document.createElement('div');
-            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow flex items-center gap-2';
+            t.className = `toast ${cls} px-4 py-3 rounded-full shadow-lg flex items-center gap-2`;
+            if (icon) {
+                const ic = document.createElement('i');
+                ic.dataset.feather = icon;
+                ic.className = 'w-4 h-4';
+                t.appendChild(ic);
+            }
             const span = document.createElement('span');
             span.textContent = msg;
-            const btn = document.createElement('button');
-            btn.innerHTML = '<i data-feather="x"></i>';
-            btn.onclick = () => t.remove();
+            span.className = 'font-medium';
             t.appendChild(span);
-            t.appendChild(btn);
+            if (dismissable) {
+                const btn = document.createElement('button');
+                btn.innerHTML = '<i data-feather="x"></i>';
+                btn.onclick = () => t.remove();
+                t.appendChild(btn);
+            }
             toastContainer.appendChild(t);
             feather.replace();
-            if (duration !== null) setTimeout(() => t.remove(), duration);
+            if (duration !== null) {
+                let timer = setTimeout(() => t.remove(), duration);
+                t.addEventListener('mouseenter', () => clearTimeout(timer));
+                t.addEventListener('mouseleave', () => timer = setTimeout(() => t.remove(), duration));
+            }
         };
 
         function clockTick() {
@@ -647,7 +675,10 @@ const applyBtnStyle = () => {};
                     startPolling();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
-                        if (!s.available) toast('⚠️ Arduino no conectado', null);
+                        if (!s.available) {
+                            showArduinoAlert();
+                            showArduinoReminder();
+                        }
                     }).catch(() => {});
                 }, 600);
             } catch (err) {
