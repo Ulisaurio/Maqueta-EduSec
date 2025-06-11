@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { getDb, initDb } from './db.js';
+import { getDb, initDb, addHuella, deleteHuella } from './db.js';
 import { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 
@@ -166,12 +166,18 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
         return res.status(404).json({ msg: `Acción '${accion}' no encontrada` });
     }
     try {
-        const resultado = await fn();
+        const id = req.query.id ? parseInt(req.query.id, 10) : undefined;
+        const resultado = await fn(id);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle)
          VALUES (?, ?, ?)`,
             [req.user.id, accion, resultado.mensaje || JSON.stringify(resultado)]
         );
+        if (accion === 'enrolar' && typeof id !== 'undefined') {
+            await addHuella({ usuario_id: req.user.id, huella_id: id });
+        } else if (accion === 'borrar' && typeof id !== 'undefined') {
+            await deleteHuella(id);
+        }
         return res.json({ accion, resultado });
     } catch (err) {
         const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';

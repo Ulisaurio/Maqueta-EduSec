@@ -92,3 +92,45 @@ export async function initDb() {
 
     return db;
 }
+
+// ----- CRUD helpers for huellas -----
+
+export async function addHuella({ usuario_id, huella_id }) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
+        [usuario_id, huella_id]
+    );
+}
+
+export async function getHuellas() {
+    const db = await getDb();
+    return db.all(`SELECT * FROM huellas`);
+}
+
+export async function getHuellaById(id) {
+    const db = await getDb();
+    return db.get(`SELECT * FROM huellas WHERE id = ?`, [id]);
+}
+
+export async function updateHuella(id, { usuario_id, huella_id }) {
+    const updates = [];
+    const params = [];
+    if (typeof usuario_id !== 'undefined') {
+        updates.push('usuario_id = ?');
+        params.push(usuario_id);
+    }
+    if (typeof huella_id !== 'undefined') {
+        updates.push('huella_id = ?');
+        params.push(huella_id);
+    }
+    if (!updates.length) return;
+    params.push(id);
+    const db = await getDb();
+    return db.run(`UPDATE huellas SET ${updates.join(', ')} WHERE id = ?`, params);
+}
+
+export async function deleteHuella(id) {
+    const db = await getDb();
+    return db.run(`DELETE FROM huellas WHERE id = ?`, [id]);
+}
