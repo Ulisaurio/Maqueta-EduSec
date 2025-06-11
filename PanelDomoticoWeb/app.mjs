@@ -10,6 +10,8 @@ import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
 import borrarCmd from './comandos/borrar.mjs';
+import rgbRedCmd from './comandos/rgb_red.mjs';
+import rgbGreenCmd from './comandos/rgb_green.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +29,17 @@ app.use(express.json());
 let db;
 await initDb();      // Crea tablas y usuario admin si es necesario
 db = await getDb();  // Obtener instancia “promisificada” de la BD
+const cfg = await readConfig();
+let systemArmed = !!cfg.systemArmed;
+try {
+    if (systemArmed) {
+        await rgbRedCmd();
+    } else {
+        await rgbGreenCmd();
+    }
+} catch (err) {
+    console.error('Error inicializando LED RGB:', err);
+}
 
 // ———————— AUTENTICACIÓN JWT ————————
 function authenticateToken(req, res, next) {
@@ -252,6 +265,36 @@ app.delete('/huellas/:id', authenticateToken, async (req, res) => {
         console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// --------- Estado armado del sistema ---------
+app.get('/system-state', authenticateToken, (req, res) => {
+    res.json({ armed: systemArmed });
+});
+
+app.post('/system-state', authenticateToken, async (req, res) => {
+    const { armed } = req.body;
+    if (typeof armed !== 'boolean') {
+        return res.status(400).json({ msg: 'armed requerido' });
+    }
+    if (armed !== systemArmed) {
+        systemArmed = armed;
+        await writeConfig({ systemArmed });
+        try {
+            if (systemArmed) {
+                await rgbRedCmd();
+            } else {
+                await rgbGreenCmd();
+            }
+        } catch (err) {
+            console.error('Error cambiando LED RGB:', err);
+        }
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'system_state', systemArmed ? 'armed' : 'disarmed']
+        );
+    }
+    res.json({ armed: systemArmed });
 });
 
 // ———————— ESTADO DEL ARDUINO ————————

@@ -1,3 +1,4 @@
 {
-  "serialPort": "COM5"
+  "serialPort": "COM5",
+  "systemArmed": false
 }
