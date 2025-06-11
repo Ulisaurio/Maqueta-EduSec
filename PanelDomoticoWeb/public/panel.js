@@ -47,9 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function moduleCard(name, status, extraCls = '') {
             let cls = '';
-            let stateCls = 'checking';
-            let label = 'Verificando...';
-            if (status) {
+            let stateCls = '';
+            let label = '--';
+            if (status !== undefined && status !== null) {
                 const ok = status.toUpperCase() !== 'NO';
                 cls = ok ? 'module-ok' : 'module-fail';
                 stateCls = ok ? 'operational' : 'faulty';
@@ -651,17 +651,16 @@ const applyBtnStyle = () => {};
 
         async function checkAllModules() {
             for (const mod in moduleActions) {
-                await verifyModule(mod);
+                await verifyModule(mod, null, false);
             }
         }
 
        function startModuleMonitoring() {
-           setCheckingStatuses();
-            checkAllModules();
             clearInterval(moduleInterval);
+            checkAllModules();
             moduleInterval = setInterval(checkAllModules, 60000);
         }
-        async function verifyModule(mod, btn) {
+        async function verifyModule(mod, btn, showChecking = true) {
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner"></span>';
@@ -671,12 +670,14 @@ const applyBtnStyle = () => {};
                 if (!accion) throw new Error('No soportado');
                 const card = document.querySelector(`.module-card[data-module="${mod}"]`);
                 const span = card ? card.querySelector('[data-status]') : null;
-                if (span) {
+                if (span && showChecking) {
                     span.classList.add('checking');
                     span.classList.remove('operational', 'faulty');
                     span.textContent = 'Verificando...';
                 }
-                await delay(2000);
+                if (showChecking) {
+                    await delay(2000);
+                }
                 let ok = false;
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
