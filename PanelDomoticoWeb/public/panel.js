@@ -67,11 +67,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     labels,
                     datasets: [{
                         data: tempHistory,
-                        borderColor: '#3b82f6',
+                        borderColor: '#1683d8',
                         borderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#3b82f6',
+                        pointBackgroundColor: '#1683d8',
                         fill: false,
                         tension: 0.4
                     }]
@@ -136,9 +136,9 @@ document.addEventListener("DOMContentLoaded", () => {
             return `
             <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
               <form id="addUserForm" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                <input id="newUser" placeholder="Usuario" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <input id="newPass" type="password" placeholder="Contraseña" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <select id="newRole" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500"><option value="admin">admin</option><option value="root">root</option></select>
+                <input id="newUser" placeholder="Usuario" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-[#1683d8]" />
+                <input id="newPass" type="password" placeholder="Contraseña" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-[#1683d8]" />
+                <select id="newRole" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-[#1683d8]"><option value="admin">admin</option><option value="root">root</option></select>
                 <button class="btn col-span-1" type="submit">Crear</button>
               </form>
               <div class="overflow-x-auto">
@@ -156,14 +156,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const sections = {
             home: `
             <section class="space-y-8">
-              <div class="relative overflow-hidden rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
+              <div class="relative overflow-hidden rounded-lg bg-gradient-to-r from-[#1683d8] via-blue-500 to-sky-500 text-white">
                 <div class="p-10 text-center bg-black/30">
                   <h2 class="text-3xl sm:text-4xl font-bold mb-2">Bienvenido a EduSec</h2>
                   <p class="text-sm sm:text-base">Tu centro de control unificado para la seguridad física inteligente</p>
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-green-100 text-green-700')}
+                ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-success-soft text-success')}
                 ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex items-center gap-2">
                       <input type="date" id="filterDate" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent text-sm"
                              value="${new Date().toISOString().substring(0, 10)}" onchange="updateAccessTable(this.value)">
-                      <button onclick="exportAccessCSV()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Exportar CSV</button>
+                      <button onclick="exportAccessCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>
                     </div>
                   </div>
                   <div id="accessContainer"></div>
@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
                   <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
-                    <div id="voltageBar" class="bg-indigo-500 h-4 rounded-full" style="width: 0%"></div>
+                    <div id="voltageBar" class="bg-[#1683d8] h-4 rounded-full" style="width: 0%"></div>
                   </div>
                   <p class="text-sm"><span id="voltageLevel" class="font-medium">--</span></p>
                 </div>
@@ -289,8 +289,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function loadSection(btn, id) {
-            document.querySelectorAll('#menu button').forEach(el => el.classList.remove('bg-indigo-600', 'text-white', 'border-l-4', 'border-indigo-600'));
-            btn.classList.add('bg-indigo-600', 'text-white', 'border-l-4', 'border-indigo-600');
+            document.querySelectorAll('#menu button').forEach(el => el.classList.remove('sidebar-active'));
+            btn.classList.add('sidebar-active');
             content.innerHTML = sections[id];
             feather.replace();
 
@@ -303,11 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        const applyBtnStyle = () => {
-            document.querySelectorAll('.btn').forEach(b => {
-                b.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'text-white', 'px-4', 'py-2', 'rounded');
-            });
-        };
+const applyBtnStyle = () => {};
 
         const toast = msg => {
             const t = document.createElement('div');
