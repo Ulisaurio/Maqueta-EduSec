@@ -184,6 +184,19 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`;
         }
 
+        // Tabla de tarjetas RFID
+        function rfidTable() {
+            return `
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-700">
+                  <tr><th class="px-3 py-2 text-left">UID</th><th class="px-3 py-2 text-left">Usuario</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                </thead>
+                <tbody id="rfidTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+              </table>
+            </div>`;
+        }
+
         // Formulario y tabla de cuentas
         function accountManager() {
             return `
@@ -266,6 +279,16 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
+              ${currentUser && currentUser.role === 'root' ? `
+              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                <h4 class="font-bold">Tarjetas RFID</h4>
+                <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
+                <div id="rfidAdmin" class="hidden space-y-4">
+                  ${rfidTable()}
+                  <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
+                </div>
+              </div>
+              ` : ''}
             </section>`;
             },
 
@@ -638,6 +661,90 @@ const applyBtnStyle = () => {};
             } catch (err) {
                 toast(err.message);
             }
+        }
+
+        function toggleRfidAdmin() {
+            const d = document.getElementById('rfidAdmin');
+            if (!d) return;
+            const wasHidden = d.classList.contains('hidden');
+            d.classList.toggle('hidden');
+            if (wasHidden && !d.classList.contains('hidden')) {
+                loadRfidCards();
+            }
+        }
+
+        async function showRfidModal() {
+            const users = await fetchUsers();
+            if (!users.length) return;
+            const options = users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+            const div = document.createElement('div');
+            div.id = 'rfidModal';
+            div.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            div.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72 text-center">
+                <h4 class="font-bold">Escanee la Tarjeta</h4>
+                <p id="rfidMsg" class="text-sm">Esperando lectura...</p>
+                <select id="rfidUserSel" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">${options}</select>
+                <div class="flex justify-end gap-2">
+                  <button id="cancelRfid" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
+                  <button id="confirmRfid" class="btn btn-sm" disabled>Guardar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(div);
+            feather.replace();
+            let uid = null;
+            try {
+                const resp = await api('/comando/rfid');
+                const m = /UID:\s*([A-F0-9:]+)/i.exec(resp.resultado || '');
+                uid = m ? m[1].toUpperCase() : null;
+                div.querySelector('#rfidMsg').textContent = uid ? `UID: ${uid}` : 'No se detectó tarjeta';
+                if (uid) div.querySelector('#confirmRfid').disabled = false;
+            } catch {
+                div.querySelector('#rfidMsg').textContent = 'Error leyendo tarjeta';
+            }
+            div.querySelector('#cancelRfid').onclick = () => div.remove();
+            div.querySelector('#confirmRfid').onclick = async () => {
+                const usuarioId = parseInt(div.querySelector('#rfidUserSel').value, 10);
+                div.remove();
+                if (uid && usuarioId) await saveRfidCard(uid, usuarioId);
+            };
+        }
+
+        async function saveRfidCard(uid, usuario_id) {
+            try {
+                await api('/rfid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid, usuario_id })
+                });
+                loadRfidCards();
+                toast('Tarjeta registrada');
+            } catch (err) {
+                toast(err.message);
+            }
+        }
+
+        async function loadRfidCards() {
+            try {
+                const list = await api('/rfid');
+                await renderRfidCards(list);
+            } catch {
+                toast('Error cargando tarjetas');
+            }
+        }
+
+        async function renderRfidCards(list) {
+            const tbody = document.getElementById('rfidTBody');
+            if (!tbody) return;
+            const users = await fetchUsers();
+            const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+            tbody.innerHTML = '';
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                const user = userMap[item.usuario_id] || item.usuario_id;
+                tr.innerHTML = `<td class="px-3 py-1">${item.uid}</td><td class="px-3 py-1">${user}</td><td class="px-3 py-1"><button class="delRfid btn btn-sm btn-danger" data-uid="${item.uid}">Eliminar</button></td>`;
+                tbody.appendChild(tr);
+            });
         }
         const moduleActions = {
             'Arduino': 'arduino_status',
@@ -1065,6 +1172,13 @@ const applyBtnStyle = () => {};
                     await api(`/huellas/${id}`, { method: 'DELETE' });
                     loadHuellas();
                 } catch (err) { toast(err.message); }
+            } else if (e.target.classList.contains('delRfid')) {
+                const uid = e.target.dataset.uid;
+                if (!confirm('¿Eliminar tarjeta?')) return;
+                try {
+                    await api(`/rfid/${uid}`, { method: 'DELETE' });
+                    loadRfidCards();
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#toggleArmBtn')) {
                 try {
                     const data = await api('/system-state', {
@@ -1113,6 +1227,8 @@ const applyBtnStyle = () => {};
                 toast('Reiniciando módulos...');
             } else if (e.target.closest('#addHuellaBtn')) {
                 showEnrollModal();
+            } else if (e.target.closest('#addRfidBtn')) {
+                showRfidModal();
             }
         });
 
@@ -1139,10 +1255,12 @@ const applyBtnStyle = () => {};
         // Exponer funciones usadas por atributos HTML
         window.cmd = cmd;
         window.toggleFingerAdmin = toggleFingerAdmin;
+        window.toggleRfidAdmin = toggleRfidAdmin;
         window.updateAccessTable = updateAccessTable;
         window.exportAccessCSV = exportAccessCSV;
         window.verifyModule = verifyModule;
         window.showEnrollModal = showEnrollModal;
+        window.showRfidModal = showRfidModal;
 
         // Inicializar Feather Icons
         feather.replace();
