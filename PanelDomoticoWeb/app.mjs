@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { getDb, initDb } from './db.js';
+import { isArduinoAvailable } from './util/sendSerial.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -162,6 +163,11 @@ app.get('/huellas', authenticateToken, async (req, res) => {
         console.error('Error en /huellas:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// ———————— ESTADO DEL ARDUINO ————————
+app.get('/status/arduino', (req, res) => {
+    res.json({ available: isArduinoAvailable() });
 });
 
 // ———————— CRUD DE USUARIOS (/users) ————————

@@ -326,12 +326,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = msg => {
+        const toast = (msg, duration = 3000) => {
             const t = document.createElement('div');
-            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow';
-            t.textContent = msg;
+            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow flex items-center gap-2';
+            const span = document.createElement('span');
+            span.textContent = msg;
+            const btn = document.createElement('button');
+            btn.innerHTML = '<i data-feather="x"></i>';
+            btn.onclick = () => t.remove();
+            t.appendChild(span);
+            t.appendChild(btn);
             toastContainer.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
+            feather.replace();
+            if (duration !== null) setTimeout(() => t.remove(), duration);
         };
 
         function clockTick() {
@@ -615,6 +622,9 @@ const applyBtnStyle = () => {};
                     document.querySelector('#menu button').click();
                     startPolling();
                     checkAllModules().then(updateModulesSummary);
+                    api('/status/arduino').then(s => {
+                        if (!s.available) toast('⚠️ Arduino no conectado', null);
+                    }).catch(() => {});
                 }, 600);
             } catch (err) {
                 loginError.textContent = err.message;
