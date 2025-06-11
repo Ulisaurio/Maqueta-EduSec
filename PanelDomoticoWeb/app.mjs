@@ -233,27 +233,6 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     }
 });
 // --------- Administrar huellas ---------
-app.post('/huellas', authenticateToken, async (req, res) => {
-    const { usuario_id, huella_id } = req.body;
-    if (!usuario_id || !huella_id) {
-        return res.status(400).json({ msg: 'usuario_id y huella_id requeridos' });
-    }
-    try {
-        const resp = await sendSerial(`enrolar ${huella_id}`);
-        await db.run(
-            `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
-            [usuario_id, huella_id]
-        );
-        await db.run(
-            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-            [req.user.id, 'enrolar', `usuario:${usuario_id}, huella:${huella_id} => ${resp}`]
-        );
-        return res.json({ msg: resp });
-    } catch (err) {
-        console.error('Error en POST /huellas:', err);
-        return res.status(500).json({ msg: 'Error interno' });
-    }
-});
 
 app.delete('/huellas/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
