@@ -502,10 +502,6 @@ const applyBtnStyle = () => {};
             if (t1) t1.textContent = txt;
             if (t2) t2.textContent = txt;
         }
-        function updateConsumption(v) {
-            const el = document.getElementById('powerConsumption');
-            if (el) el.textContent = v === null ? '--' : `${v}A`;
-        }
         function modulesSummary() {
             const cards = document.querySelectorAll('.module-grid .module-card');
             const allOk = Array.from(cards).every(c => c.classList.contains('module-ok'));
@@ -540,25 +536,9 @@ const applyBtnStyle = () => {};
             }
             updateHistoryDisplay();
         }
-        async function refreshConsumption() {
-            try {
-                const data = await api('/comando/consumo');
-                const c = parseNumber(data.resultado);
-                if (c !== null) {
-                    updateConsumption(c);
-                } else {
-                    updateConsumption(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateConsumption(null);
-            }
-        }
         function startPolling() {
             refreshTemp();
-            refreshConsumption();
             setInterval(refreshTemp, 10000);
-            setInterval(refreshConsumption, 15000);
         }
         async function refreshTemp() {
             try {
@@ -587,25 +567,9 @@ const applyBtnStyle = () => {};
             }
             updateHistoryDisplay();
         }
-        async function refreshConsumption() {
-            try {
-                const data = await api('/comando/consumo');
-                const c = parseNumber(data.resultado);
-                if (c !== null) {
-                    updateConsumption(c);
-                } else {
-                    updateConsumption(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateConsumption(null);
-            }
-        }
         function startPolling() {
             refreshTemp();
-            refreshConsumption();
             setInterval(refreshTemp, 10000);
-            setInterval(refreshConsumption, 15000);
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
