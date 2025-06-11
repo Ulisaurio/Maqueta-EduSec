@@ -283,6 +283,46 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </section>`,
 
+            monitoreo: () => `
+            <section class="space-y-6">
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="shield"></i>Monitoreo</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Estado del Sistema</h4>
+                  <div class="flex items-center gap-2">
+                    <span id="systemStatusText" class="font-medium text-green-600">ÁREA LIBRE</span>
+                    <span id="systemIndicator" class="w-3 h-3 rounded-full bg-green-500"></span>
+                  </div>
+                  <button id="toggleArmBtn" class="btn w-full flex items-center justify-center gap-2"><i data-feather="lock"></i>Armar Sistema</button>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Sensores Activos</h4>
+                  <div class="flex items-center justify-between">
+                    <span>Sensor de Movimiento (PIR)</span>
+                    <span id="pirStatus" class="status inactive">Sin Movimiento</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Sensor de Puerta (Ultrasonido)</span>
+                    <span id="doorStatus" class="status inactive">Puerta Cerrada</span>
+                  </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Notificaciones</h4>
+                  <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-1"><i data-feather="volume-2"></i>Buzzer:</span>
+                    <span class="flex items-center gap-2">
+                      <span id="buzzerStatus" class="status inactive">Inactivo</span>
+                      ${currentUser && currentUser.role === 'root' ? '<button id="testBuzzerBtn" class="btn btn-sm">Probar</button>' : ''}
+                    </span>
+                  </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
+                  <div id="securityLog"></div>
+                </div>
+              </div>
+            </section>`,
+
             energia: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="zap"></i>Alimentación</h3>
@@ -326,6 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const menuDef = [
             ["home", "home", "Inicio"],
             ["acceso", "lock", "Acceso principal"],
+            ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
             ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
@@ -335,7 +376,10 @@ document.addEventListener("DOMContentLoaded", () => {
         function initMenu() {
             const m = document.getElementById('menu');
             m.innerHTML = '';
+            const seen = new Set();
             menuDef.forEach(([id, ic, label]) => {
+                if (seen.has(id)) return; // evita duplicados
+                seen.add(id);
                 if (id === 'cuentas' && currentUser.role !== 'root') return;
                 const b = document.createElement('button');
                 b.dataset.sec = id;
@@ -360,6 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
+            if (id === 'monitoreo') startSecurityMonitoring();
         }
 
 
@@ -649,16 +694,146 @@ const applyBtnStyle = () => {};
             }
         }
 
-        async function checkAllModules() {
-            for (const mod in moduleActions) {
-                await verifyModule(mod, null, false);
+       async function checkAllModules() {
+           for (const mod in moduleActions) {
+               await verifyModule(mod, null, false);
+           }
+       }
+
+      function startModuleMonitoring() {
+           clearInterval(moduleInterval);
+           checkAllModules();
+           moduleInterval = setInterval(checkAllModules, 60000);
+       }
+
+        function updateSystemStateUI() {
+            const txt = document.getElementById('systemStatusText');
+            const ind = document.getElementById('systemIndicator');
+            const btn = document.getElementById('toggleArmBtn');
+            if (!txt || !ind || !btn) return;
+            if (systemArmed) {
+                txt.textContent = 'ZONA SEGURA';
+                txt.className = 'font-medium text-red-500';
+                ind.className = 'w-3 h-3 rounded-full bg-red-500';
+                btn.innerHTML = '<i data-feather="unlock"></i>Desarmar Sistema';
+            } else {
+                txt.textContent = 'ÁREA LIBRE';
+                txt.className = 'font-medium text-green-600';
+                ind.className = 'w-3 h-3 rounded-full bg-green-500';
+                btn.innerHTML = '<i data-feather="lock"></i>Armar Sistema';
+            }
+            feather.replace();
+        }
+
+        function updatePirUI(active) {
+            const el = document.getElementById('pirStatus');
+            if (!el) return;
+            if (active === null) {
+                el.textContent = 'Sin respuesta';
+                el.className = 'status unavailable';
+            } else {
+                el.textContent = active ? 'Movimiento Detectado' : 'Sin Movimiento';
+                el.className = 'status ' + (active ? 'faulty' : 'inactive');
             }
         }
 
-       function startModuleMonitoring() {
-            clearInterval(moduleInterval);
-            checkAllModules();
-            moduleInterval = setInterval(checkAllModules, 60000);
+        function updateDoorUI(open) {
+            const el = document.getElementById('doorStatus');
+            if (!el) return;
+            if (open === null) {
+                el.textContent = 'Sin respuesta';
+                el.className = 'status unavailable';
+            } else {
+                el.textContent = open ? 'Puerta Abierta' : 'Puerta Cerrada';
+                el.className = 'status ' + (open ? 'faulty' : 'inactive');
+            }
+        }
+
+        function updateBuzzerUI(active) {
+            const el = document.getElementById('buzzerStatus');
+            if (!el) return;
+            el.textContent = active ? 'Activo' : 'Inactivo';
+            el.className = 'status ' + (active ? 'operational' : 'inactive');
+        }
+
+        function renderSecurityLog() {
+            const logEl = document.getElementById('securityLog');
+            if (!logEl) return;
+            const rows = securityLogs.map(l => {
+                const [h, ev] = l.split(' - ');
+                return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
+            }).join('');
+            logEl.innerHTML = `
+            <div class="max-h-40 overflow-y-auto">
+              <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-700">
+                  <tr><th class="px-3 py-2 text-left">Hora</th><th class="px-3 py-2 text-left">Evento</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+        }
+
+        function addSecurityLog(msg) {
+            const now = new Date().toLocaleTimeString();
+            securityLogs.unshift(`${now} - ${msg}`);
+            if (securityLogs.length > 20) securityLogs.pop();
+            renderSecurityLog();
+        }
+
+        function triggerAlarm() {
+            if (buzzerTimeout) return;
+            updateBuzzerUI(true);
+            api('/comando/alarm').catch(() => {});
+            addSecurityLog('Buzzer activado');
+            buzzerTimeout = setTimeout(() => {
+                updateBuzzerUI(false);
+                buzzerTimeout = null;
+            }, 3000);
+        }
+
+        async function checkSensors() {
+            try {
+                const pirData = await api('/comando/pir');
+                const m = /PIR:\s*(\d+)/i.exec(pirData.resultado || '');
+                const val = m ? parseInt(m[1]) : 0;
+                updatePirUI(val === 1);
+                if (lastPir !== null && val !== lastPir) {
+                    addSecurityLog(`PIR: ${val ? 'Movimiento Detectado' : 'Sin Movimiento'}`);
+                }
+                if (systemArmed && val === 1) triggerAlarm();
+                lastPir = val;
+            } catch (err) {
+                updatePirUI(null);
+                if (lastPir !== null) addSecurityLog('PIR sin respuesta');
+                lastPir = null;
+            }
+
+            try {
+                const distData = await api('/comando/distancia');
+                const n = /([-+]?\d+(?:\.\d+)?)/.exec(distData.resultado || '');
+                const cm = n ? parseFloat(n[1]) : null;
+                const open = cm !== null ? cm > 10 : false;
+                updateDoorUI(open);
+                if (lastDoorOpen !== null && open !== lastDoorOpen) {
+                    addSecurityLog(`Ultrasonido: ${open ? 'Puerta Abierta' : 'Puerta Cerrada'}`);
+                }
+                if (systemArmed && open) triggerAlarm();
+                lastDoorOpen = open;
+            } catch (err) {
+                updateDoorUI(null);
+                if (lastDoorOpen !== null) addSecurityLog('Ultrasonido sin respuesta');
+                lastDoorOpen = null;
+            }
+        }
+
+        function startSecurityMonitoring() {
+            clearInterval(monitorInterval);
+            updateSystemStateUI();
+            updateBuzzerUI(false);
+            renderSecurityLog();
+            checkSensors();
+            monitorInterval = setInterval(checkSensors, 3000);
         }
         async function verifyModule(mod, btn, showChecking = true) {
             if (btn) {
@@ -704,6 +879,12 @@ const applyBtnStyle = () => {};
         let jwtToken = '';
         let tempHistory = [];
         let tempChart = null;
+        let systemArmed = false;
+        let monitorInterval = null;
+        let buzzerTimeout = null;
+        let lastPir = null;
+        let lastDoorOpen = null;
+        const securityLogs = [];
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
@@ -839,6 +1020,11 @@ const applyBtnStyle = () => {};
                     await api(`/users/${id}`, { method: 'DELETE' });
                     loadUsers();
                 } catch (err) { toast(err.message); }
+            } else if (e.target.closest('#toggleArmBtn')) {
+                systemArmed = !systemArmed;
+                updateSystemStateUI();
+            } else if (e.target.closest('#testBuzzerBtn')) {
+                cmd('alarm');
             }
         });
 
