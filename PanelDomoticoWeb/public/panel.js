@@ -330,6 +330,55 @@ document.addEventListener("DOMContentLoaded", () => {
               ${accountManager()}
             </section>`,
 
+            config: () => `
+            <section class="space-y-6">
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="settings"></i>Configuración del Sistema</h3>
+
+              <details class="details-card">
+                <summary><span class="flex items-center gap-2">🛠️ Ajustes Generales</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
+                <div class="p-4 space-y-2">
+                  <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
+                  <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
+                  <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
+                </div>
+              </details>
+
+              <details class="details-card">
+                <summary><span class="flex items-center gap-2">📂 Gestión de Datos (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
+                <div class="p-4 flex flex-wrap gap-2">
+                  <button id="backupBtn" class="btn flex-auto sm:flex-none">Copia de Seguridad</button>
+                  <button id="restoreBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Restaurar Copia</button>
+                  <button id="clearCacheBtn" class="btn btn-danger flex-auto sm:flex-none">Limpiar Caché</button>
+                </div>
+              </details>
+
+              <details class="details-card">
+                <summary><span class="flex items-center gap-2">🧪 Parámetros del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
+                <div class="p-4 space-y-4">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <label for="sensorInterval" class="flex-1">Intervalo de Sondeo de Sensores (segundos):</label>
+                    <input id="sensorInterval" type="number" class="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">
+                    <button id="applySensorInterval" class="btn btn-sm">Aplicar</button>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <label for="sessionTimeout" class="flex-1">Tiempo de Espera de Sesión Inactiva (minutos):</label>
+                    <input id="sessionTimeout" type="number" class="w-24 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">
+                    <button id="applySessionTimeout" class="btn btn-sm">Aplicar</button>
+                  </div>
+                </div>
+              </details>
+
+              <details class="details-card">
+                <summary><span class="flex items-center gap-2">🧰 Mantenimiento del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
+                <div class="p-4 flex flex-wrap gap-2">
+                  <button id="updateBtn" class="btn flex-auto sm:flex-none">Buscar Actualizaciones</button>
+                  <button id="restartModulesBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Reiniciar Módulos</button>
+                </div>
+              </details>
+
+            </section>`,
+
             acerca: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="info"></i>Acerca de</h3>
@@ -348,6 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
             ["monitoreo", "eye", "Monitoreo"],
+            ["config", "settings", "Configuración"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
         ];
@@ -359,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
             menuDef.forEach(([id, ic, label]) => {
                 if (seen.has(id)) return; // evita duplicados
                 seen.add(id);
-                if (id === 'cuentas' && currentUser.role !== 'root') return;
+                if ((id === 'cuentas' || id === 'config') && currentUser.role !== 'root') return;
                 const b = document.createElement('button');
                 b.dataset.sec = id;
                 b.className = 'w-full flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700';
@@ -1006,6 +1056,22 @@ const applyBtnStyle = () => {};
                 updateSystemStateUI();
             } else if (e.target.closest('#testBuzzerBtn')) {
                 cmd('alarm');
+            } else if (e.target.closest('#savePrefsBtn')) {
+                toast('Preferencias guardadas');
+            } else if (e.target.closest('#backupBtn')) {
+                toast('Copia de seguridad creada');
+            } else if (e.target.closest('#restoreBtn')) {
+                toast('Restaurando copia...');
+            } else if (e.target.closest('#clearCacheBtn')) {
+                toast('Caché limpiada');
+            } else if (e.target.closest('#applySensorInterval')) {
+                toast('Intervalo aplicado');
+            } else if (e.target.closest('#applySessionTimeout')) {
+                toast('Tiempo de espera actualizado');
+            } else if (e.target.closest('#updateBtn')) {
+                toast('Buscando actualizaciones...');
+            } else if (e.target.closest('#restartModulesBtn')) {
+                toast('Reiniciando módulos...');
             }
         });
 
