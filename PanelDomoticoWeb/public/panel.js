@@ -180,7 +180,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Huella</th></tr>
+                  <tr>
+                    <th class="px-3 py-2 text-left">ID Huella</th>
+                    <th class="px-3 py-2 text-left">Usuario</th>
+                    <th class="px-3 py-2 text-left">Acciones</th>
+                  </tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -261,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button onclick="toggleFingerAdmin()" class="btn w-full text-base">Administrar Huellas</button>
                 <div id="fingerAdmin" class="hidden space-y-4">
                   ${fingerTable()}
-                  <button class="btn w-full">Agregar Nueva Huella</button>
+                  <button id="addFingerBtn" class="btn w-full">Agregar Nueva Huella</button>
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
@@ -927,8 +931,8 @@ const applyBtnStyle = () => {};
 
         async function loadHuellas() {
             try {
-                const ids = await api('/huellas');
-                renderHuellas(ids);
+                const list = await api('/huellas');
+                renderHuellas(list);
             } catch {
                 toast('Error cargando huellas');
             }
@@ -938,9 +942,16 @@ const applyBtnStyle = () => {};
             const tbody = document.getElementById('fingerTBody');
             if (!tbody) return;
             tbody.innerHTML = '';
-            list.forEach(id => {
+            list.forEach(item => {
+                const fid = item.huella_id || item.id;
+                const user = item.username || '-';
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-3 py-1">${id}</td>`;
+                tr.innerHTML = `
+                  <td class="px-3 py-1">${fid}</td>
+                  <td class="px-3 py-1">${user}</td>
+                  <td class="px-3 py-1">
+                    <button class="delFinger btn btn-sm btn-danger" data-id="${fid}">Eliminar</button>
+                  </td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -1021,6 +1032,18 @@ const applyBtnStyle = () => {};
                 toast('Buscando actualizaciones...');
             } else if (e.target.closest('#restartModulesBtn')) {
                 toast('Reiniciando módulos...');
+            } else if (e.target.closest('#addFingerBtn')) {
+                try {
+                    await api('/huellas', { method: 'POST' });
+                    loadHuellas();
+                } catch (err) { toast(err.message); }
+            } else if (e.target.classList.contains('delFinger')) {
+                const id = e.target.dataset.id;
+                if (!confirm('¿Eliminar huella?')) return;
+                try {
+                    await api(`/huellas/${id}`, { method: 'DELETE' });
+                    loadHuellas();
+                } catch (err) { toast(err.message); }
             }
         });
 
