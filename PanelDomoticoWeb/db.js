@@ -38,7 +38,7 @@ export async function initDb() {
       password TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'admin',
       activo INTEGER NOT NULL DEFAULT 1,
-      creado DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       ultimo_login DATETIME
     )
   `);
@@ -50,7 +50,7 @@ export async function initDb() {
       usuario_id INTEGER,
       accion TEXT NOT NULL,
       detalle TEXT,
-      timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      timestamp DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
   `);
@@ -61,7 +61,7 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
       huella_id TEXT NOT NULL,
-      creado DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
   `);
