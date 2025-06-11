@@ -162,11 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   <p class="text-sm sm:text-base">Tu centro de control unificado para la seguridad física inteligente</p>
                 </div>
               </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-green-100 text-green-700')}
                 ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
-                ${sensorCard('droplet', 'Humedad', '<span id="humValue">--</span>', 'bg-cyan-100 text-cyan-700')}
               </div>
               <div class="mt-6">
                 <h4 class="text-lg font-semibold mb-2">Histórico de Temperatura (últimas 12 horas)</h4>
