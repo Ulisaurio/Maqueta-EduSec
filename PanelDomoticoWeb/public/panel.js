@@ -136,14 +136,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const accessActions = ['abrir', 'cerrar', 'rfid', 'huella'];
+        const ignorePatterns = /(arduino|timeout|sin respuesta|error|no disponible)/i;
 
         // Tabla de accesos diarios (solo eventos relevantes)
         async function accessTableHTML(dateStr) {
             try {
                 const logs = await api('/logs/' + dateStr);
-                const filtered = logs.filter(l => accessActions.includes(l.accion));
+                const filtered = logs.filter(l => {
+                    return accessActions.includes(l.accion) && !ignorePatterns.test(l.detalle || '');
+                });
                 const rows = filtered.map(l => {
-                    const h = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const h = new Date(l.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const ev = `${l.accion}: ${l.detalle}`;
                     return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
                 }).join('');
@@ -568,10 +571,10 @@ const applyBtnStyle = () => {};
             if (!date) return;
             try {
                 const logs = await api('/logs/' + date);
-                const filtered = logs.filter(l => accessActions.includes(l.accion));
+                const filtered = logs.filter(l => accessActions.includes(l.accion) && !ignorePatterns.test(l.detalle || ''));
                 const header = 'timestamp,username,accion,detalle\n';
                 const csv = header + filtered.map(l => {
-                    const ts = new Date(l.timestamp).toISOString();
+                    const ts = new Date(l.timestamp + 'Z').toISOString();
                     const u = l.username || '';
                     const a = l.accion || '';
                     const d = (l.detalle || '').replace(/"/g, '""');
