@@ -28,13 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const stateCls = ok ? 'operational' : 'faulty';
             const label = ok ? 'Operativo' : 'Fallo';
             return `
-            <div class="module-card ${cls} shadow">
+            <div class="module-card ${cls} shadow" data-module="${name}">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2">
                   <i data-feather="cpu" class="module-icon"></i>
                   <h4 class="module-title">${name}</h4>
                 </div>
-                <span class="status ${stateCls}">${label}</span>
+                <span class="status ${stateCls}" data-status>${label}</span>
               </div>
               <button onclick="verifyModule('${name}', this)" class="verify-btn btn btn-sm mt-4 self-end">Verificar</button>
             </div>`;
@@ -303,6 +303,8 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
+            if (id === 'monitoreo') startModuleMonitoring();
+            else clearInterval(moduleInterval);
         }
 
 
@@ -450,6 +452,33 @@ document.addEventListener("DOMContentLoaded", () => {
             'Buzzer': 'alarm',
             'Display LCD': 'rgb_red'
         };
+
+        let moduleInterval;
+
+        function updateModuleCard(mod, ok) {
+            const card = document.querySelector(`.module-card[data-module="${mod}"]`);
+            if (!card) return;
+            const span = card.querySelector('[data-status]');
+            card.classList.toggle('module-ok', ok);
+            card.classList.toggle('module-fail', !ok);
+            if (span) {
+                span.classList.toggle('operational', ok);
+                span.classList.toggle('faulty', !ok);
+                span.textContent = ok ? 'Operativo' : 'Fallo';
+            }
+        }
+
+        async function checkAllModules() {
+            for (const mod in moduleActions) {
+                await verifyModule(mod);
+            }
+        }
+
+        function startModuleMonitoring() {
+            checkAllModules();
+            clearInterval(moduleInterval);
+            moduleInterval = setInterval(checkAllModules, 60000);
+        }
         async function verifyModule(mod, btn) {
             if (btn) {
                 btn.disabled = true;
@@ -460,8 +489,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!accion) throw new Error('No soportado');
                 const data = await api(`/comando/${accion}`);
                 toast(`Resultado de ${mod}: ${data.resultado}`);
+                const ok = /OK/i.test(data.resultado || '');
+                updateModuleCard(mod, ok);
             } catch (err) {
                 toast(err.message);
+                updateModuleCard(mod, false);
             } finally {
                 if (btn) {
                     btn.disabled = false;
