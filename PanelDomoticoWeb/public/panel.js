@@ -135,11 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
             refreshTemp();
         }
 
-        // Tabla de accesos diarios
+        const accessActions = ['abrir', 'cerrar', 'rfid', 'huella'];
+
+        // Tabla de accesos diarios (solo eventos relevantes)
         async function accessTableHTML(dateStr) {
             try {
                 const logs = await api('/logs/' + dateStr);
-                const rows = logs.map(l => {
+                const filtered = logs.filter(l => accessActions.includes(l.accion));
+                const rows = filtered.map(l => {
                     const h = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const ev = `${l.accion}: ${l.detalle}`;
                     return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
@@ -194,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Definición de secciones
         const sections = {
-            home: `
+            home: () => `
             <section class="space-y-8">
               <div class="relative overflow-hidden rounded-lg bg-gradient-to-r from-[#1683d8] via-blue-500 to-sky-500 text-white">
                 <div class="p-10 text-center bg-black/30">
@@ -215,18 +218,22 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </section>`,
 
-            acceso: `
+            acceso: () => {
+                const exportBtn = currentUser && currentUser.role === 'root'
+                    ? `<button onclick="exportAccessCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>`
+                    : '';
+                return `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control del Acceso principal</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 ${card('lock', 'Estado', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
-                    <h4 class="font-bold">Accesos del Acceso principal</h4>
+                    <h4 class="font-bold">Historial</h4>
                     <div class="flex items-center gap-2">
                       <input type="date" id="filterDate" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent text-sm"
                              value="${new Date().toISOString().substring(0, 10)}" onchange="updateAccessTable(this.value)">
-                      <button onclick="exportAccessCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>
+                      ${exportBtn}
                     </div>
                   </div>
                   <div id="accessContainer"></div>
@@ -249,9 +256,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
-            </section>`,
+            </section>`;
+            },
 
-            monitoreo: `
+            monitoreo: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="module-grid">
@@ -264,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </section>`,
 
-            energia: `
+            energia: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="zap"></i>Alimentación</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -286,13 +294,13 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </section>`,
 
-            cuentas: `
+            cuentas: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="users"></i>Gestión de Cuentas</h3>
               ${accountManager()}
             </section>`,
 
-            acerca: `
+            acerca: () => `
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="info"></i>Acerca de</h3>
               <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4 text-sm">
@@ -331,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
         function loadSection(btn, id) {
             document.querySelectorAll('#menu button').forEach(el => el.classList.remove('sidebar-active'));
             btn.classList.add('sidebar-active');
-            content.innerHTML = sections[id];
+            content.innerHTML = sections[id]();
             feather.replace();
 
             applyBtnStyle();
@@ -559,18 +567,24 @@ const applyBtnStyle = () => {};
             const date = document.getElementById('filterDate').value;
             if (!date) return;
             try {
-                const res = await fetch(`/logs/${date}/csv`, {
-                    headers: { 'Authorization': `Bearer ${jwtToken}` }
-                });
-                if (!res.ok) throw new Error('Error exportando CSV');
-                const blob = await res.blob();
+                const logs = await api('/logs/' + date);
+                const filtered = logs.filter(l => accessActions.includes(l.accion));
+                const header = 'timestamp,username,accion,detalle\n';
+                const csv = header + filtered.map(l => {
+                    const ts = new Date(l.timestamp).toISOString();
+                    const u = l.username || '';
+                    const a = l.accion || '';
+                    const d = (l.detalle || '').replace(/"/g, '""');
+                    return `"${ts}","${u}","${a}","${d}"`;
+                }).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `logs_${date}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                const aEl = document.createElement('a');
+                aEl.href = url;
+                aEl.download = `logs_${date}.csv`;
+                document.body.appendChild(aEl);
+                aEl.click();
+                document.body.removeChild(aEl);
                 URL.revokeObjectURL(url);
             } catch (err) {
                 toast(err.message);
@@ -818,6 +832,13 @@ const applyBtnStyle = () => {};
                 menuAccElem.classList.add('hidden');
             }
         });
+
+        // Exponer funciones usadas por atributos HTML
+        window.cmd = cmd;
+        window.toggleFingerAdmin = toggleFingerAdmin;
+        window.updateAccessTable = updateAccessTable;
+        window.exportAccessCSV = exportAccessCSV;
+        window.verifyModule = verifyModule;
 
         // Inicializar Feather Icons
         feather.replace();
