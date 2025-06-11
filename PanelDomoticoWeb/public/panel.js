@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Fuente principal del sistema">
                   <div class="flex items-center gap-2"><i data-feather="zap" class="text-xl"></i><h4 class="font-bold">Fuente de Alimentación</h4></div>
-                  <p class="text-sm"><span class="font-medium">AC 120V</span></p>
+                  <p class="text-sm"><span id="mainsStatus" class="font-medium">--</span></p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
                   <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
@@ -354,6 +354,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (bar) bar.style.width = v === null ? '0%' : `${Math.min(v,100)}%`;
             if (lvl) lvl.textContent = v === null ? '--' : `${v}V`;
         }
+        function updateConsumption(v) {
+            const el = document.getElementById('powerConsumption');
+            if (el) el.textContent = v === null ? '--' : `${v}A`;
+        }
+        function updateMains(v) {
+            const el = document.getElementById('mainsStatus');
+            if (el) el.textContent = v === null ? '--' : v;
+        }
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
@@ -375,16 +383,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     updateVoltage(null);
                 }
+                if (data.resultado) updateMains(data.resultado);
             } catch (err) {
                 toast(err.message);
                 updateVoltage(null);
+                updateMains(null);
+            }
+        }
+        async function refreshConsumption() {
+            try {
+                const data = await api('/comando/consumo');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    updateConsumption(parseFloat(m[1]));
+                } else {
+                    updateConsumption(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateConsumption(null);
             }
         }
         function startPolling() {
             refreshTemp();
             refreshVoltage();
+            refreshConsumption();
             setInterval(refreshTemp, 10000);
             setInterval(refreshVoltage, 15000);
+            setInterval(refreshConsumption, 15000);
         }
         async function refreshTemp() {
             try {
@@ -419,18 +445,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
                 if (m) {
                     const v = parseFloat(m[1]);
-                    const bar = document.getElementById('voltageBar');
-                    const lvl = document.getElementById('voltageLevel');
-                    if (bar) bar.style.width = `${Math.min(v,100)}%`;
-                    if (lvl) lvl.textContent = `${v}V`;
+                    updateVoltage(v);
+                } else {
+                    updateVoltage(null);
                 }
-            } catch (err) { toast(err.message); }
+                if (data.resultado) updateMains(data.resultado);
+            } catch (err) {
+                toast(err.message);
+                updateVoltage(null);
+                updateMains(null);
+            }
+        }
+        async function refreshConsumption() {
+            try {
+                const data = await api('/comando/consumo');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    updateConsumption(parseFloat(m[1]));
+                } else {
+                    updateConsumption(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateConsumption(null);
+            }
         }
         function startPolling() {
             refreshTemp();
             refreshVoltage();
+            refreshConsumption();
             setInterval(refreshTemp, 10000);
             setInterval(refreshVoltage, 15000);
+            setInterval(refreshConsumption, 15000);
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
