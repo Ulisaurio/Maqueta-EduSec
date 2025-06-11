@@ -12,10 +12,10 @@ let arduinoAvailable = false;
  */
 export async function checkArduino() {
     const cfg = await readConfig();
-    const path = cfg.serialPort || 'COM5';
+    const portPath = cfg.serialPort || 'COM5';
     try {
         const ports = await SerialPort.list();
-        arduinoAvailable = ports.some(p => p.path === path);
+        arduinoAvailable = ports.some(p => p.path === portPath);
     } catch (err) {
         arduinoAvailable = false;
         console.error('Error listando puertos serial:', err.message);
@@ -37,17 +37,17 @@ await checkArduino();
  */
 export default async function sendSerial(comando) {
     const cfg = await readConfig();
-    const path = cfg.serialPort || 'COM5';
+    const portPath = cfg.serialPort || 'COM5';
     if (!arduinoAvailable) {
         await checkArduino();
         if (!arduinoAvailable) {
-            return `Arduino no disponible (${path})`;
+            return `Arduino no disponible (${portPath})`;
         }
     }
     return new Promise((resolve) => {
         // Inicializar puerto y parser si es necesario
         if (!port) {
-            port = new SerialPort(path, { baudRate: 9600, autoOpen: false });
+            port = new SerialPort(portPath, { baudRate: 9600, autoOpen: false });
             parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
             port.on('error', err => {
                 console.error('Error en el puerto serial:', err.message);
