@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const showArduinoReminder = () => {
-        toast('⚠️ Arduino no conectado', null, false, 'alert-critical');
+        toast('Arduino no conectado', 5000, true, 'warning-toast', 'alert-triangle');
     };
 
         // Generadores de tarjetas
@@ -346,11 +346,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = (msg, duration = 3000, dismissable = true, cls = 'bg-slate-800 text-white') => {
+        const toast = (msg, duration = 3000, dismissable = true,
+                      cls = 'bg-slate-800 text-white', icon = null) => {
             const t = document.createElement('div');
-            t.className = `${cls} px-4 py-2 rounded shadow flex items-center gap-2`;
+            t.className = `toast ${cls} px-4 py-3 rounded-full shadow-lg flex items-center gap-2`;
+            if (icon) {
+                const ic = document.createElement('i');
+                ic.dataset.feather = icon;
+                ic.className = 'w-4 h-4';
+                t.appendChild(ic);
+            }
             const span = document.createElement('span');
             span.textContent = msg;
+            span.className = 'font-medium';
             t.appendChild(span);
             if (dismissable) {
                 const btn = document.createElement('button');
@@ -360,7 +368,11 @@ const applyBtnStyle = () => {};
             }
             toastContainer.appendChild(t);
             feather.replace();
-            if (duration !== null) setTimeout(() => t.remove(), duration);
+            if (duration !== null) {
+                let timer = setTimeout(() => t.remove(), duration);
+                t.addEventListener('mouseenter', () => clearTimeout(timer));
+                t.addEventListener('mouseleave', () => timer = setTimeout(() => t.remove(), duration));
+            }
         };
 
         function clockTick() {
