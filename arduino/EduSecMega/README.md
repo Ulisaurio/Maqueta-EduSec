@@ -12,7 +12,7 @@ single Arduino Mega can handle all commands from the Node.js panel.
 | PIR sensor                          | 2   |
 | Ultrasonic TRIG                     | 8   |
 | Ultrasonic ECHO                     | 9   |
-| RFID SS                             | 10  |
+| RFID SDA                            | 10  |
 | RFID RST                            | 11  |
 | RFID MOSI                           | 51  |
 | RFID MISO                           | 50  |

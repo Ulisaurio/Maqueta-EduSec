@@ -2,7 +2,7 @@
    ------------------------------------------
    • PIR en D5
    • Ultrasonido: TRIG→D8, ECHO→D4
-   • RFID RC522: SS=D10, RST=D9, MOSI=D11, MISO=D12, SCK=D13, VCC=3.3V, GND
+   • RFID RC522: SDA=D10, RST=D9, MOSI=D11, MISO=D12, SCK=D13, VCC=3.3V, GND
    • Buzzer pasivo en D7 (directo al pin, sin resistencia)
    • LED RGB (cátodo común) en R→D3, G→D5, B→D6, "-"→GND
 */
@@ -14,9 +14,9 @@ const int PIR_PIN    = 2;
 const int TRIG_PIN   = 8;
 const int ECHO_PIN   = 4;
 
-const int SS_PIN     = 10;
+const int SDA_PIN    = 10;
 const int RST_PIN    = 9;
-MFRC522 rfid(SS_PIN, RST_PIN);
+MFRC522 rfid(SDA_PIN, RST_PIN);
 
 const int BUZZER_PIN = 7;
 const int LED_R      = 3;

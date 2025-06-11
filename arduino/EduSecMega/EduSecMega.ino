@@ -10,7 +10,7 @@
 #define PIR_PIN      2
 #define TRIG_PIN     8
 #define ECHO_PIN     9
-#define SS_PIN       10
+#define SDA_PIN      10
 #define RST_PIN      11
 #define BUZZER_PIN   7
 #define LED_R        3
@@ -20,7 +20,7 @@
 
 // ----------------------------------------------------------
 Adafruit_Fingerprint finger(&Serial1);  // uses hardware Serial1
-MFRC522 rfid(SS_PIN, RST_PIN);
+MFRC522 rfid(SDA_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
