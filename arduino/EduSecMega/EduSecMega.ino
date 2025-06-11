@@ -26,7 +26,6 @@ Adafruit_Fingerprint finger(&Serial1);
 
 // ----------------------------------------------------------
 SoftwareSerial fingerSerial(FINGER_RX, FINGER_TX);
-Adafruit_Fingerprint finger(&fingerSerial);
 MFRC522 rfid(SS_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);

@@ -24,11 +24,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function moduleCard(name, status) {
-            const cls = status.startsWith('NO') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
+            const ok = !status.startsWith('NO');
+            const cls = ok ? 'border-green-400 text-green-700 bg-green-50' : 'border-red-400 text-red-700 bg-red-50';
             return `
             <div class="relative">
-              ${card('cpu', name, status, cls)}
-              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-2 py-1 rounded">Verificar</button>
+              ${card('cpu', name, status, `${cls} border`)}
+              <button onclick="verifyModule('${name}', this)" class="absolute bottom-2 right-2 btn btn-sm">Verificar</button>
             </div>`;
         }
 
@@ -61,11 +62,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     datasets: [{
                         data: temps,
                         borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        pointRadius: 3,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
                         pointBackgroundColor: '#3b82f6',
                         fill: false,
-                        tension: 0.3
+                        tension: 0.4
                     }]
                 },
                 options: {
@@ -80,7 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                 label: ctx => `${ctx.formattedValue}°C - ${ctx.label}`
                             }
                         }
-                    }
+                    },
+                    interaction: { mode: 'nearest', intersect: false }
                 }
             });
             updateTemp(temps[temps.length - 1]);
@@ -128,11 +131,11 @@ document.addEventListener("DOMContentLoaded", () => {
         function accountManager() {
             return `
             <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-              <form id="addUserForm" class="flex flex-col sm:flex-row gap-4">
-                <input id="newUser" placeholder="Usuario" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <input id="newPass" type="password" placeholder="Contraseña" class="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
-                <select id="newRole" class="px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500"><option value="admin">admin</option><option value="root">root</option></select>
-                <button class="btn" type="submit">Crear</button>
+              <form id="addUserForm" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                <input id="newUser" placeholder="Usuario" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
+                <input id="newPass" type="password" placeholder="Contraseña" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500" />
+                <select id="newRole" class="col-span-1 sm:col-span-1 px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-transparent focus:ring-2 focus:ring-indigo-500"><option value="admin">admin</option><option value="root">root</option></select>
+                <button class="btn col-span-1" type="submit">Crear</button>
               </form>
               <div class="overflow-x-auto">
                 <table id="usersTable" class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
@@ -149,11 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const sections = {
             home: `
             <section class="space-y-8">
-              <div class="relative overflow-hidden rounded-lg">
-                <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-30"></div>
-                <div class="p-10 relative z-10 text-center">
+              <div class="relative overflow-hidden rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
+                <div class="p-10 text-center bg-black/30">
                   <h2 class="text-3xl sm:text-4xl font-bold mb-2">Bienvenido a EduSec</h2>
-                  <p class="text-sm sm:text-base text-slate-700 dark:text-slate-200">Tu centro de control unificado para la seguridad física inteligente</p>
+                  <p class="text-sm sm:text-base">Tu centro de control unificado para la seguridad física inteligente</p>
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -172,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             acceso: `
             <section class="space-y-6">
-              <h3 class="text-2xl font-semibold border-b border-slate-200 dark:border-slate-700 pb-2">🔐 Control de Acceso</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control de Acceso</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 ${card('lock', 'Estado Puerta', `<span id="doorState">🔒 Cerrada</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
@@ -195,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button id="btnMoreAccion" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><i data-feather="more-horizontal"></i></button>
                 </div>
                 <p class="text-sm" id="fingerSensorState">Sensor huella: <span class="font-medium">OK</span></p>
-                <button onclick="toggleFingerAdmin()" class="btn w-full">Administrar Huellas</button>
+                <button onclick="toggleFingerAdmin()" class="btn w-full text-base">Administrar Huellas</button>
                 <div id="fingerAdmin" class="hidden space-y-4">
                   ${fingerTable()}
                   <button class="btn w-full">Agregar Nueva Huella</button>
@@ -210,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             monitoreo: `
             <section class="space-y-6">
-              <h3 class="text-2xl font-semibold border-b border-slate-200 dark:border-slate-700 pb-2">📡 Monitoreo</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 ${moduleCard('PIR Sensor', 'OK')}
                 ${moduleCard('RFID Reader', 'OK')}
@@ -223,20 +225,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
             energia: `
             <section class="space-y-6">
-              <h3 class="text-2xl font-semibold border-b border-slate-200 dark:border-slate-700 pb-2">⚡ Alimentación</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="zap"></i>Alimentación</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Fuente principal del sistema">
                   <div class="flex items-center gap-2"><i data-feather="zap" class="text-xl"></i><h4 class="font-bold">Fuente de Alimentación</h4></div>
                   <p class="text-sm"><span class="font-medium">AC 120V</span></p>
                 </div>
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
                   <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
                     <div id="voltageBar" class="bg-indigo-500 h-4 rounded-full" style="width: 65%"></div>
                   </div>
                   <p class="text-sm"><span id="voltageLevel" class="font-medium">65V</span></p>
                 </div>
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Consumo aproximado en amperios">
                   <div class="flex items-center gap-2"><i data-feather="cpu" class="text-xl"></i><h4 class="font-bold">Consumo</h4></div>
                   <p class="text-sm"><span id="powerConsumption" class="font-medium">1.5A</span></p>
                 </div>
@@ -245,13 +247,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             cuentas: `
             <section class="space-y-6">
-              <h3 class="text-2xl font-semibold border-b border-slate-200 dark;border-slate-700 pb-2">👥 Gestión de Cuentas</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="users"></i>Gestión de Cuentas</h3>
               ${accountManager()}
             </section>`,
 
             acerca: `
             <section class="space-y-6">
-              <h3 class="text-2xl font-semibold border-b border-slate-200 dark;border-slate-700 pb-2">ℹ️ Acerca de</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="info"></i>Acerca de</h3>
               <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4 text-sm">
                 <p>Proyecto EduSec v1.0 – Panel Domótico Inteligente.</p>
                 <p>Desarrollado por Ulises Roldán &amp; Team, 2025.</p>
@@ -347,7 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
         function verifyModule(mod, btn) {
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = 'Verificando…';
+                btn.innerHTML = '<span class="spinner"></span>';
             }
             setTimeout(() => {
                 if (btn) {
@@ -416,10 +418,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.innerHTML = `
                   <td class="px-3 py-1">${u.username}</td>
                   <td class="px-3 py-1">${u.role}</td>
-                  <td class="px-3 py-1">${u.activo ? '✅' : '❌'}</td>
-                  <td class="px-3 py-1 space-x-2">
-                    <button class="toggleUser btn btn-small" data-id="${u.id}" data-activo="${u.activo}">${u.activo ? 'Desactivar' : 'Activar'}</button>
-                    <button class="delUser btn btn-small btn-danger" data-id="${u.id}">Eliminar</button>
+                  <td class="px-3 py-1">
+                    <label class="toggle-switch">
+                      <input type="checkbox" class="toggleUser" data-id="${u.id}" ${u.activo ? 'checked' : ''}>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </td>
+                  <td class="px-3 py-1">
+                    <button class="delUser btn btn-sm btn-danger" data-id="${u.id}">Eliminar</button>
                   </td>`;
                 tbody.appendChild(tr);
             });
@@ -440,15 +446,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        document.addEventListener('click', async e => {
+        document.addEventListener('change', async e => {
             if (e.target.classList.contains('toggleUser')) {
                 const id = e.target.dataset.id;
-                const act = e.target.dataset.activo === '1' || e.target.dataset.activo === 'true';
+                const activo = e.target.checked ? 1 : 0;
                 try {
-                    await api(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: act ? 0 : 1 }) });
+                    await api(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) });
                     loadUsers();
                 } catch (err) { toast(err.message); }
             }
+        });
+
+        document.addEventListener('click', async e => {
             if (e.target.classList.contains('delUser')) {
                 const id = e.target.dataset.id;
                 if (!confirm('¿Eliminar usuario?')) return;
