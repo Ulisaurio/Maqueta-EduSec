@@ -126,6 +126,22 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
     }
 });
 
+// ———————— LISTAR HUELLAS ————————
+app.get('/huellas', authenticateToken, async (req, res) => {
+    const fn = accionesMap['listar_huellas'];
+    if (!fn) {
+        return res.status(500).json({ msg: 'Comando no soportado' });
+    }
+    try {
+        const resp = await fn();
+        const list = resp ? resp.split(',').filter(Boolean).map(n => parseInt(n)) : [];
+        return res.json(list);
+    } catch (err) {
+        console.error('Error en /huellas:', err);
+        return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
 // ———————— CRUD DE USUARIOS (/users) ————————
 app.get('/users', authenticateToken, async (req, res) => {
     if (req.user.role !== 'root') {
