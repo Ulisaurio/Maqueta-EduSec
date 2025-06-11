@@ -334,28 +334,28 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="settings"></i>Configuración del Sistema</h3>
 
-              <details class="details-card">
-                <summary><span class="flex items-center gap-2">🛠️ Ajustes Generales</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
-                <div class="p-4 space-y-2">
+              <div class="config-card">
+                <div class="config-card-header flex items-center gap-2">🛠️ Ajustes Generales</div>
+                <div class="config-card-body space-y-2">
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                 </div>
-              </details>
+              </div>
 
-              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                <summary><span class="flex items-center gap-2">📂 Gestión de Datos (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
-                <div class="p-4 flex flex-wrap gap-2">
+              <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
+                <div class="config-card-header flex items-center gap-2">📂 Gestión de Datos (Simulado)</div>
+                <div class="config-card-body flex flex-wrap gap-2">
                   <button id="backupBtn" class="btn flex-auto sm:flex-none">Copia de Seguridad</button>
                   <button id="restoreBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Restaurar Copia</button>
                   <button id="clearCacheBtn" class="btn btn-danger flex-auto sm:flex-none">Limpiar Caché</button>
                 </div>
-              </details>
+              </div>
 
-              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                <summary><span class="flex items-center gap-2">🧪 Parámetros del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
-                <div class="p-4 space-y-4">
+              <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
+                <div class="config-card-header flex items-center gap-2">🧪 Parámetros del Sistema (Simulado)</div>
+                <div class="config-card-body space-y-4">
                   <div class="flex flex-wrap items-center gap-2">
                     <label for="sensorInterval" class="flex-1">Intervalo de Sondeo de Sensores (segundos):</label>
                     <input id="sensorInterval" type="number" class="input-field w-24">
@@ -367,15 +367,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button id="applySessionTimeout" class="btn btn-sm">Aplicar</button>
                   </div>
                 </div>
-              </details>
+              </div>
 
-              <details class="details-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                <summary><span class="flex items-center gap-2">🧰 Mantenimiento del Sistema (Simulado)</span><i data-feather="chevron-down" class="collapse-icon"></i></summary>
-                <div class="p-4 flex flex-wrap gap-2">
+              <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
+                <div class="config-card-header flex items-center gap-2">🧰 Mantenimiento del Sistema (Simulado)</div>
+                <div class="config-card-body flex flex-wrap gap-2">
                   <button id="updateBtn" class="btn flex-auto sm:flex-none">Buscar Actualizaciones</button>
                   <button id="restartModulesBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Reiniciar Módulos</button>
                 </div>
-              </details>
+              </div>
 
             </section>`,
 
