@@ -96,26 +96,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Tabla de accesos diarios
-        function accessTableHTML(dateStr) {
-            const events = {
-                '2025-06-05': ['08:01: Puerta Abierta', '08:03: Puerta Cerrada', '12:15: Puerta Abierta', '12:20: Puerta Cerrada'],
-                '2025-06-04': ['09:10: Puerta Abierta', '09:12: Puerta Cerrada']
-            };
-            const todays = events[dateStr] || [];
-            return `
-            <div class="max-h-60 overflow-y-auto">
-              <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
-                <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">Hora</th><th class="px-3 py-2 text-left">Evento</th></tr>
-                </thead>
-                <tbody>
-                  ${todays.map(e => {
-                const [h, ...rest] = e.split(': ');
-                return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${rest.join(': ')}</td></tr>`;
-            }).join('')}
-                </tbody>
-              </table>
-            </div>`;
+        async function accessTableHTML(dateStr) {
+            try {
+                const logs = await api('/logs/' + dateStr);
+                const rows = logs.map(l => {
+                    const h = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const ev = `${l.accion}: ${l.detalle}`;
+                    return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
+                }).join('');
+                return `
+                <div class="max-h-60 overflow-y-auto">
+                  <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead class="bg-slate-100 dark:bg-slate-700">
+                      <tr><th class="px-3 py-2 text-left">Hora</th><th class="px-3 py-2 text-left">Evento</th></tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>`;
+            } catch {
+                return `<p class="text-sm text-red-500 px-2">Error cargando logs</p>`;
+            }
         }
 
         // Tabla de huellas
@@ -191,9 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
                       <button onclick="exportAccessCSV()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Exportar CSV</button>
                     </div>
                   </div>
-                  <div id="accessContainer">
-                    ${accessTableHTML(new Date().toISOString().substring(0, 10))}
-                  </div>
+                  <div id="accessContainer"></div>
                 </div>
               </div>
               <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
@@ -303,6 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => content.classList.remove('fade-in'), 400);
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
+            if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
         }
 
 
@@ -436,8 +435,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const d = document.getElementById('fingerAdmin');
             if (d) d.classList.toggle('hidden');
         }
-        function updateAccessTable(dateStr) {
-            document.getElementById('accessContainer').innerHTML = accessTableHTML(dateStr);
+        async function updateAccessTable(dateStr) {
+            document.getElementById('accessContainer').innerHTML = await accessTableHTML(dateStr);
         }
         function exportAccessCSV() {
             toast('Exportando CSV... (simulado)');
