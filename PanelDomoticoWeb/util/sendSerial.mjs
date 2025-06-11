@@ -46,7 +46,8 @@ export default async function sendSerial(comando) {
                 res();
             }
         });
-        port = new SerialPort(portPath, { baudRate: 9600, autoOpen: false });
+        // SerialPort v12 expects an options object with the path
+        port = new SerialPort({ path: portPath, baudRate: 9600, autoOpen: false });
         parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
         port.on('error', err => {
             console.error('Error en el puerto serial:', err.message);
@@ -62,7 +63,8 @@ export default async function sendSerial(comando) {
     return new Promise((resolve) => {
         // Inicializar puerto y parser si es necesario
         if (!port) {
-            port = new SerialPort(portPath, { baudRate: 9600, autoOpen: false });
+            // Initialize using the object-based API
+            port = new SerialPort({ path: portPath, baudRate: 9600, autoOpen: false });
             parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
             port.on('error', err => {
                 console.error('Error en el puerto serial:', err.message);
