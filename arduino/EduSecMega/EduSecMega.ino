@@ -1,7 +1,6 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Adafruit_Fingerprint.h>
-#include <SoftwareSerial.h>
 #include <SPI.h>
 #include <MFRC522.h>
 
@@ -20,18 +19,13 @@
 // Fingerprint sensor on Serial1 (RX1=19, TX1=18)
 
 // ----------------------------------------------------------
-Adafruit_Fingerprint finger(&Serial1);
-#define FINGER_RX    19     // Serial1 RX
-#define FINGER_TX    18     // Serial1 TX
-
-// ----------------------------------------------------------
-SoftwareSerial fingerSerial(FINGER_RX, FINGER_TX);
+Adafruit_Fingerprint finger(&Serial1);  // uses hardware Serial1
 MFRC522 rfid(SS_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-String bufferIn;
-bool   cmdReady = false;
+#define CMD_BUF_SIZE 64
+char    cmdBuffer[CMD_BUF_SIZE];
 
 // Helper to set RGB LED
 const bool COMMON_CATHODE = true;
@@ -51,6 +45,7 @@ void rgbOff(){ setRGB(0,0,0); }
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+  Serial.setTimeout(10); // short timeout for readBytesUntil
 
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
@@ -134,29 +129,34 @@ void sonarAlarma() {
 }
 
 void loop() {
-  while (Serial.available()) {
-    char c = Serial.read();
-    if (c == '\r') continue;
-    if (c == '\n') { cmdReady = true; break; }
-    bufferIn += c;
-  }
-  if (!cmdReady) return;
+  if (!Serial.available()) return;
 
+  size_t len = Serial.readBytesUntil('\n', cmdBuffer, CMD_BUF_SIZE - 1);
+  cmdBuffer[len] = '\0';
+  if (len > 0 && cmdBuffer[len - 1] == '\r') cmdBuffer[len - 1] = '\0';
+
+  char *cmd = cmdBuffer;
+  while (*cmd == ' ' || *cmd == '\t') cmd++;
+  size_t end = strlen(cmd);
+  while (end > 0 && (cmd[end - 1] == ' ' || cmd[end - 1] == '\t')) {
+    cmd[--end] = '\0';
+  }
   String cmd = bufferIn;
   cmd.trim();
+  cmd.toLowerCase();
   bufferIn = "";
   cmdReady = false;
 
-  if (cmd == "abrir") {
+  if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
     Serial.println(F("Puerta abierta"));
   }
-  else if (cmd == "cerrar") {
+  else if (strcmp(cmd, "cerrar") == 0) {
     digitalWrite(RELAY_PIN, HIGH);
     Serial.println(F("Puerta cerrada"));
   }
-  else if (cmd.startsWith("enrolar ")) {
-    int id = cmd.substring(8).toInt();
+  else if (strncmp(cmd, "enrolar ", 8) == 0) {
+    int id = atoi(cmd + 8);
     uint8_t r = enrolarHuella(id);
     if (r == 0) Serial.println(F("Huella enrolada"));
     else Serial.println(F("Error enrolando"));
@@ -170,7 +170,7 @@ void loop() {
     if (verificarHuella()) Serial.println(F("Huella válida"));
     else Serial.println(F("Huella no válida"));
   }
-  else if (cmd == "distancia") {
+  else if (strcmp(cmd, "distancia") == 0) {
     long dur = leerDistancia();
     if (dur == 0) Serial.println(F("Distancia: error"));
     else {
@@ -180,12 +180,12 @@ void loop() {
       Serial.println(F(" cm"));
     }
   }
-  else if (cmd == "pir") {
+  else if (strcmp(cmd, "pir") == 0) {
     int v = digitalRead(PIR_PIN);
     Serial.print(F("PIR: "));
     Serial.println(v);
   }
-  else if (cmd == "rfid") {
+  else if (strcmp(cmd, "rfid") == 0) {
     if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
       Serial.print(F("UID: "));
       for (byte i = 0; i < rfid.uid.size; i++) {
@@ -199,25 +199,25 @@ void loop() {
       Serial.println(F("Sin tarjeta"));
     }
   }
-  else if (cmd == "voltaje") {
+  else if (strcmp(cmd, "voltaje") == 0) {
     float v = leerVoltaje();
     Serial.print(F("Voltaje: "));
     Serial.print(v, 2);
     Serial.println(F(" V"));
   }
-  else if (cmd == "alarm") {
+  else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
     Serial.println(F("Alarma sonó"));
   }
   else if (cmd.startsWith("rgb ")) {
     String c = cmd.substring(4);
-    if (c == "red")      setRGB(255,0,0);
-    else if (c == "green") setRGB(0,255,0);
-    else if (c == "blue")  setRGB(0,0,255);
-    else if (c == "off")   rgbOff();
-    Serial.println(F("RGB listo"));
+    if (c == "red")      { setRGB(255,0,0); Serial.println("RGB listo"); }
+    else if (c == "green") { setRGB(0,255,0); Serial.println("RGB listo"); }
+    else if (c == "blue")  { setRGB(0,0,255); Serial.println("RGB listo"); }
+    else if (c == "off")   { rgbOff(); Serial.println("RGB listo"); }
+    else Serial.println(F("rgb inválido"));
   }
-  else if (cmd == "leertemp") {
+  else if (strcmp(cmd, "leertemp") == 0) {
     sensors.requestTemperatures();
     float t = sensors.getTempCByIndex(0);
     if (t == DEVICE_DISCONNECTED_C) {
