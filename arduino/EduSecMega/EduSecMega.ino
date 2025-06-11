@@ -52,7 +52,7 @@ void setup() {
 
   Serial1.begin(57600);
   finger.begin(57600);
-  if (!finger.verifyPassword()) Serial.println("⚠️ Huella no detectada");
+  if (!finger.verifyPassword()) Serial.println(F("⚠️ Huella no detectada"));
 
   SPI.begin();
   rfid.PCD_Init();
@@ -72,19 +72,19 @@ void setup() {
   pinMode(LED_B, OUTPUT);
   rgbOff();
 
-  Serial.println("EduSecMega listo");
+  Serial.println(F("EduSecMega listo"));
 }
 
 // ---------------------- Fingerprint -----------------------
 uint8_t enrolarHuella(uint8_t id) {
-  Serial.println("Coloca el dedo...");
+  Serial.println(F("Coloca el dedo..."));
   while (finger.getImage() != FINGERPRINT_OK) {
     if (Serial.available()) return 1; // abort
   }
   if (finger.image2Tz(1) != FINGERPRINT_OK) return 2;
-  Serial.println("Retira el dedo");
+  Serial.println(F("Retira el dedo"));
   delay(2000);
-  Serial.println("Coloca el mismo dedo de nuevo...");
+  Serial.println(F("Coloca el mismo dedo de nuevo..."));
   while (finger.getImage() != FINGERPRINT_OK) {
     if (Serial.available()) return 1;
   }
@@ -149,45 +149,45 @@ void loop() {
 
   if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
-    Serial.println("Puerta abierta");
+    Serial.println(F("Puerta abierta"));
   }
   else if (strcmp(cmd, "cerrar") == 0) {
     digitalWrite(RELAY_PIN, HIGH);
-    Serial.println("Puerta cerrada");
+    Serial.println(F("Puerta cerrada"));
   }
   else if (strncmp(cmd, "enrolar ", 8) == 0) {
     int id = atoi(cmd + 8);
     uint8_t r = enrolarHuella(id);
-    if (r == 0) Serial.println("Huella enrolada");
-    else Serial.println("Error enrolando");
+    if (r == 0) Serial.println(F("Huella enrolada"));
+    else Serial.println(F("Error enrolando"));
   }
-  else if (strncmp(cmd, "borrar ", 7) == 0) {
-    int id = atoi(cmd + 7);
-    if (borrarHuella(id) == FINGERPRINT_OK) Serial.println("Huella borrada");
-    else Serial.println("Error borrando");
+  else if (cmd.startsWith("borrar ")) {
+    int id = cmd.substring(7).toInt();
+    if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
+    else Serial.println(F("Error borrando"));
   }
-  else if (strcmp(cmd, "huella") == 0) {
-    if (verificarHuella()) Serial.println("Huella válida");
-    else Serial.println("Huella no válida");
+  else if (cmd == "huella") {
+    if (verificarHuella()) Serial.println(F("Huella válida"));
+    else Serial.println(F("Huella no válida"));
   }
   else if (strcmp(cmd, "distancia") == 0) {
     long dur = leerDistancia();
-    if (dur == 0) Serial.println("Distancia: error");
+    if (dur == 0) Serial.println(F("Distancia: error"));
     else {
       float cm = (dur * 0.034) / 2.0;
-      Serial.print("Distancia: ");
+      Serial.print(F("Distancia: "));
       Serial.print(cm, 1);
-      Serial.println(" cm");
+      Serial.println(F(" cm"));
     }
   }
   else if (strcmp(cmd, "pir") == 0) {
     int v = digitalRead(PIR_PIN);
-    Serial.print("PIR: ");
+    Serial.print(F("PIR: "));
     Serial.println(v);
   }
   else if (strcmp(cmd, "rfid") == 0) {
     if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-      Serial.print("UID: ");
+      Serial.print(F("UID: "));
       for (byte i = 0; i < rfid.uid.size; i++) {
         if (rfid.uid.uidByte[i] < 0x10) Serial.print('0');
         Serial.print(rfid.uid.uidByte[i], HEX);
@@ -196,18 +196,18 @@ void loop() {
       Serial.println();
       rfid.PICC_HaltA();
     } else {
-      Serial.println("Sin tarjeta");
+      Serial.println(F("Sin tarjeta"));
     }
   }
   else if (strcmp(cmd, "voltaje") == 0) {
     float v = leerVoltaje();
-    Serial.print("Voltaje: ");
+    Serial.print(F("Voltaje: "));
     Serial.print(v, 2);
-    Serial.println(" V");
+    Serial.println(F(" V"));
   }
   else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
-    Serial.println("Alarma sonó");
+    Serial.println(F("Alarma sonó"));
   }
   else if (cmd.startsWith("rgb ")) {
     String c = cmd.substring(4);
@@ -221,14 +221,14 @@ void loop() {
     sensors.requestTemperatures();
     float t = sensors.getTempCByIndex(0);
     if (t == DEVICE_DISCONNECTED_C) {
-      Serial.println("Error: DS18B20 no conectado");
+      Serial.println(F("Error: DS18B20 no conectado"));
     } else {
-      Serial.print("Temp: ");
+      Serial.print(F("Temp: "));
       Serial.print(t, 1);
-      Serial.println(" C");
+      Serial.println(F(" C"));
     }
   }
   else {
-    Serial.println("comando no reconocido");
+    Serial.println(F("comando no reconocido"));
   }
 }
