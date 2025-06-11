@@ -511,7 +511,12 @@ const applyBtnStyle = () => {};
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
-            if (d) d.classList.toggle('hidden');
+            if (!d) return;
+            const wasHidden = d.classList.contains('hidden');
+            d.classList.toggle('hidden');
+            if (wasHidden && !d.classList.contains('hidden')) {
+                loadHuellas();
+            }
         }
         async function updateAccessTable(dateStr) {
             document.getElementById('accessContainer').innerHTML = await accessTableHTML(dateStr);
