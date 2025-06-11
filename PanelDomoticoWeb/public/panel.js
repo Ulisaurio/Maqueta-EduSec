@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     return accessActions.includes(l.accion) && !ignorePatterns.test(l.detalle || '');
                 });
                 const rows = filtered.map(l => {
-                    const h = new Date(l.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const h = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const ev = `${l.accion}: ${l.detalle}`;
                     return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
                 }).join('');
@@ -617,7 +617,7 @@ const applyBtnStyle = () => {};
                 const filtered = logs.filter(l => accessActions.includes(l.accion) && !ignorePatterns.test(l.detalle || ''));
                 const header = 'timestamp,username,accion,detalle\n';
                 const csv = header + filtered.map(l => {
-                    const ts = new Date(l.timestamp + 'Z').toISOString();
+                    const ts = new Date(l.timestamp).toISOString();
                     const u = l.username || '';
                     const a = l.accion || '';
                     const d = (l.detalle || '').replace(/"/g, '""');
