@@ -19,6 +19,17 @@ single Arduino Mega can handle all commands from the Node.js panel.
 | Fingerprint (Serial1) TX/RX | 18/19 |
 | Voltage sense      | A0  |
 
+### RFID wiring
+
+The MFRC522 module uses the Mega's hardware SPI bus. Besides `SS` and `RST`,
+connect the remaining pins as follows:
+
+- MOSI → 51
+- MISO → 50
+- SCK  → 52
+- 3.3 V → 3.3 V pin
+- GND  → GND
+
 Adjust the wiring if necessary. The serial port runs at 9600 bps and expects
 newline terminated commands (e.g. `abrir`, `enrolar 5`, `pir`). The sketch
 responds with a single line suitable for the `sendSerial` helper in the Node.js
