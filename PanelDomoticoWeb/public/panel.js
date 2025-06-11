@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Usuario</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Usuario</th><th class="px-3 py-2 text-left">Acciones</th></tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -985,7 +985,7 @@ const applyBtnStyle = () => {};
             tbody.innerHTML = '';
             list.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${item.username}</td>`;
+                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${item.username}</td><td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -1028,6 +1028,13 @@ const applyBtnStyle = () => {};
                 try {
                     await api(`/users/${id}`, { method: 'DELETE' });
                     loadUsers();
+                } catch (err) { toast(err.message); }
+            } else if (e.target.classList.contains('delFinger')) {
+                const id = e.target.dataset.id;
+                if (!confirm('¿Eliminar huella?')) return;
+                try {
+                    await api(`/huellas/${id}`, { method: 'DELETE' });
+                    loadHuellas();
                 } catch (err) { toast(err.message); }
             } else if (e.target.closest('#toggleArmBtn')) {
                 systemArmed = !systemArmed;
