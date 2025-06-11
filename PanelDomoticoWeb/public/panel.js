@@ -50,7 +50,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Sparklines (ejemplo estático)
         function sparklineHTML() {
-            return `<canvas id="sparklineChart" class="sparkline"></canvas>`;
+            return `
+            <div class="relative h-full">
+              <canvas id="sparklineChart" class="sparkline hidden"></canvas>
+              <div id="noHistoryMsg" class="flex items-center justify-center h-full text-sm text-slate-500">Historial no disponible...</div>
+            </div>`;
+        }
+
+        function updateHistoryDisplay() {
+            const canvas = document.getElementById('sparklineChart');
+            const msg = document.getElementById('noHistoryMsg');
+            if (!canvas || !msg) return;
+            if (tempHistory.length === 0) {
+                canvas.classList.add('hidden');
+                msg.classList.remove('hidden');
+            } else {
+                canvas.classList.remove('hidden');
+                msg.classList.add('hidden');
+            }
         }
 
         function renderSparkline() {
@@ -89,9 +106,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                         }
                     },
-                    interaction: { mode: 'nearest', intersect: false }
-                }
-            });
+                interaction: { mode: 'nearest', intersect: false }
+            }
+        });
+            updateHistoryDisplay();
             refreshTemp();
         }
 
@@ -363,12 +381,19 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const data = await api('/comando/leertemp');
                 const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) updateTemp(parseFloat(m[1]));
-                else updateTemp(null);
+                if (m) {
+                    const val = parseFloat(m[1]);
+                    updateTemp(val);
+                    tempHistory.push(val);
+                    if (tempHistory.length > 12) tempHistory.shift();
+                } else {
+                    updateTemp(null);
+                }
             } catch (err) {
                 toast(err.message);
                 updateTemp(null);
             }
+            updateHistoryDisplay();
         }
         async function refreshVoltage() {
             try {
@@ -435,6 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 toast(err.message);
                 updateTemp(null);
             }
+            updateHistoryDisplay();
         }
         async function refreshVoltage() {
             try {
