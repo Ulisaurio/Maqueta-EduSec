@@ -23,6 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (arduinoAlert) arduinoAlert.classList.remove('hidden');
     };
 
+    const showArduinoReminder = () => {
+        toast('⚠️ Arduino no conectado', null, false, 'alert-critical');
+    };
+
         // Generadores de tarjetas
         function card(icon, title, value, cls = "") {
             return `
@@ -342,16 +346,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = (msg, duration = 3000) => {
+        const toast = (msg, duration = 3000, dismissable = true, cls = 'bg-slate-800 text-white') => {
             const t = document.createElement('div');
-            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow flex items-center gap-2';
+            t.className = `${cls} px-4 py-2 rounded shadow flex items-center gap-2`;
             const span = document.createElement('span');
             span.textContent = msg;
-            const btn = document.createElement('button');
-            btn.innerHTML = '<i data-feather="x"></i>';
-            btn.onclick = () => t.remove();
             t.appendChild(span);
-            t.appendChild(btn);
+            if (dismissable) {
+                const btn = document.createElement('button');
+                btn.innerHTML = '<i data-feather="x"></i>';
+                btn.onclick = () => t.remove();
+                t.appendChild(btn);
+            }
             toastContainer.appendChild(t);
             feather.replace();
             if (duration !== null) setTimeout(() => t.remove(), duration);
@@ -408,12 +414,19 @@ const applyBtnStyle = () => {};
             const el = document.getElementById('modulesSummary');
             if (el) el.textContent = modulesSummary();
         }
+        function parseNumber(str) {
+            if (!str || /(no disponible|error|timeout|sin respuesta)/i.test(str)) {
+                return null;
+            }
+            const m = /([-+]?\d+(?:\.\d+)?)/.exec(str);
+            return m ? parseFloat(m[1]) : null;
+        }
+
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
@@ -429,9 +442,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -446,9 +458,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
@@ -496,9 +508,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -513,9 +524,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
@@ -683,7 +694,10 @@ const applyBtnStyle = () => {};
                     startPolling();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
-                        if (!s.available) showArduinoAlert();
+                        if (!s.available) {
+                            showArduinoAlert();
+                            showArduinoReminder();
+                        }
                     }).catch(() => {});
                 }, 600);
             } catch (err) {
