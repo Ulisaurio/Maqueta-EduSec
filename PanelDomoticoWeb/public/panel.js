@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control del Acceso principal</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${card('lock', 'Estado del Acceso principal', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Estado', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
                     <h4 class="font-bold">Accesos del Acceso principal</h4>
