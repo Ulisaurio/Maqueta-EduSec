@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             monitoreo: () => `
             <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="eye"></i>Monitoreo</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="shield"></i>Monitoreo</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <h4 class="font-bold">Estado del Sistema</h4>
@@ -310,12 +310,15 @@ document.addEventListener("DOMContentLoaded", () => {
                   <h4 class="font-bold">Notificaciones</h4>
                   <div class="flex items-center justify-between">
                     <span class="flex items-center gap-1"><i data-feather="volume-2"></i>Buzzer:</span>
-                    <span id="buzzerStatus" class="status inactive">Inactivo</span>
+                    <span class="flex items-center gap-2">
+                      <span id="buzzerStatus" class="status inactive">Inactivo</span>
+                      ${currentUser && currentUser.role === 'root' ? '<button id="testBuzzerBtn" class="btn btn-sm">Probar</button>' : ''}
+                    </span>
                   </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
-                  <div id="securityLog" class="space-y-1 max-h-40 overflow-y-auto text-sm"></div>
+                  <div id="securityLog"></div>
                 </div>
               </div>
             </section>`,
@@ -363,6 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const menuDef = [
             ["home", "home", "Inicio"],
             ["acceso", "lock", "Acceso principal"],
+            ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
             ["monitoreo", "eye", "Monitoreo"],
             ["energia", "zap", "Alimentación"],
@@ -722,15 +726,25 @@ const applyBtnStyle = () => {};
         function updatePirUI(active) {
             const el = document.getElementById('pirStatus');
             if (!el) return;
-            el.textContent = active ? 'Movimiento Detectado' : 'Sin Movimiento';
-            el.className = 'status ' + (active ? 'faulty' : 'inactive');
+            if (active === null) {
+                el.textContent = 'Sin respuesta';
+                el.className = 'status unavailable';
+            } else {
+                el.textContent = active ? 'Movimiento Detectado' : 'Sin Movimiento';
+                el.className = 'status ' + (active ? 'faulty' : 'inactive');
+            }
         }
 
         function updateDoorUI(open) {
             const el = document.getElementById('doorStatus');
             if (!el) return;
-            el.textContent = open ? 'Puerta Abierta' : 'Puerta Cerrada';
-            el.className = 'status ' + (open ? 'faulty' : 'inactive');
+            if (open === null) {
+                el.textContent = 'Sin respuesta';
+                el.className = 'status unavailable';
+            } else {
+                el.textContent = open ? 'Puerta Abierta' : 'Puerta Cerrada';
+                el.className = 'status ' + (open ? 'faulty' : 'inactive');
+            }
         }
 
         function updateBuzzerUI(active) {
@@ -740,13 +754,29 @@ const applyBtnStyle = () => {};
             el.className = 'status ' + (active ? 'operational' : 'inactive');
         }
 
-        function addSecurityLog(msg) {
+        function renderSecurityLog() {
             const logEl = document.getElementById('securityLog');
             if (!logEl) return;
+            const rows = securityLogs.map(l => {
+                const [h, ev] = l.split(' - ');
+                return `<tr><td class="px-3 py-1">${h}</td><td class="px-3 py-1">${ev}</td></tr>`;
+            }).join('');
+            logEl.innerHTML = `
+            <div class="max-h-40 overflow-y-auto">
+              <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-700">
+                  <tr><th class="px-3 py-2 text-left">Hora</th><th class="px-3 py-2 text-left">Evento</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+        }
+
+        function addSecurityLog(msg) {
             const now = new Date().toLocaleTimeString();
             securityLogs.unshift(`${now} - ${msg}`);
             if (securityLogs.length > 20) securityLogs.pop();
-            logEl.innerHTML = securityLogs.map(l => `<div class="bg-slate-100 dark:bg-slate-700 rounded px-2 py-1">${l}</div>`).join('');
+            renderSecurityLog();
         }
 
         function triggerAlarm() {
@@ -771,7 +801,11 @@ const applyBtnStyle = () => {};
                 }
                 if (systemArmed && val === 1) triggerAlarm();
                 lastPir = val;
-            } catch (err) { }
+            } catch (err) {
+                updatePirUI(null);
+                if (lastPir !== null) addSecurityLog('PIR sin respuesta');
+                lastPir = null;
+            }
 
             try {
                 const distData = await api('/comando/distancia');
@@ -784,13 +818,19 @@ const applyBtnStyle = () => {};
                 }
                 if (systemArmed && open) triggerAlarm();
                 lastDoorOpen = open;
-            } catch (err) { }
+            } catch (err) {
+                updateDoorUI(null);
+                if (lastDoorOpen !== null) addSecurityLog('Ultrasonido sin respuesta');
+                lastDoorOpen = null;
+            }
+            feather.replace();
         }
 
         function startSecurityMonitoring() {
             clearInterval(monitorInterval);
             updateSystemStateUI();
             updateBuzzerUI(false);
+            renderSecurityLog();
             checkSensors();
             monitorInterval = setInterval(checkSensors, 3000);
         }
@@ -984,6 +1024,8 @@ const applyBtnStyle = () => {};
             } else if (e.target.closest('#toggleArmBtn')) {
                 systemArmed = !systemArmed;
                 updateSystemStateUI();
+            } else if (e.target.closest('#testBuzzerBtn')) {
+                cmd('alarm');
             }
         });
 

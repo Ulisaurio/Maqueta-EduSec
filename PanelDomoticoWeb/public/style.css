@@ -335,6 +335,10 @@ body {
     background: rgba(107, 114, 128, 0.1);
     color: #6b7280;
 }
+.status.unavailable {
+    background: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+}
 
 .module-icon {
     transition: transform .2s;
