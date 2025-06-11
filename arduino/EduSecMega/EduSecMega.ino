@@ -137,11 +137,6 @@ void loop() {
   while (end > 0 && (cmd[end - 1] == ' ' || cmd[end - 1] == '\t')) {
     cmd[--end] = '\0';
   }
-  String cmd = bufferIn;
-  cmd.trim();
-  cmd.toLowerCase();
-  bufferIn = "";
-  cmdReady = false;
 
   if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
@@ -157,12 +152,12 @@ void loop() {
     if (r == 0) Serial.println(F("Huella enrolada"));
     else Serial.println(F("Error enrolando"));
   }
-  else if (cmd.startsWith("borrar ")) {
-    int id = cmd.substring(7).toInt();
+  else if (strncmp(cmd, "borrar ", 7) == 0) {
+    int id = atoi(cmd + 7);
     if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
     else Serial.println(F("Error borrando"));
   }
-  else if (cmd == "huella") {
+  else if (strcmp(cmd, "huella") == 0) {
     if (verificarHuella()) Serial.println(F("Huella válida"));
     else Serial.println(F("Huella no válida"));
   }
@@ -209,12 +204,12 @@ void loop() {
     sonarAlarma();
     Serial.println(F("Alarma sonó"));
   }
-  else if (cmd.startsWith("rgb ")) {
-    String c = cmd.substring(4);
-    if (c == "red")      { setRGB(255,0,0); Serial.println("RGB listo"); }
-    else if (c == "green") { setRGB(0,255,0); Serial.println("RGB listo"); }
-    else if (c == "blue")  { setRGB(0,0,255); Serial.println("RGB listo"); }
-    else if (c == "off")   { rgbOff(); Serial.println("RGB listo"); }
+  else if (strncmp(cmd, "rgb ", 4) == 0) {
+    const char *c = cmd + 4;
+    if (strcmp(c, "red") == 0)      { setRGB(255,0,0); Serial.println("RGB listo"); }
+    else if (strcmp(c, "green") == 0){ setRGB(0,255,0); Serial.println("RGB listo"); }
+    else if (strcmp(c, "blue") == 0) { setRGB(0,0,255); Serial.println("RGB listo"); }
+    else if (strcmp(c, "off") == 0)  { rgbOff(); Serial.println("RGB listo"); }
     else Serial.println(F("rgb inválido"));
   }
   else if (strcmp(cmd, "leertemp") == 0) {
