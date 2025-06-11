@@ -620,7 +620,7 @@ const applyBtnStyle = () => {};
             'PIR Sensor': 'pir',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
-            'Buzzer': 'alarm'
+            'Buzzer': 'buzzer_status'
         };
 
         let moduleInterval;

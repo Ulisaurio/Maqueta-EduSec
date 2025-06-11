@@ -201,6 +201,9 @@ void loop(){
     }
     Serial.println(listado);
   }
+  else if(strcmp(cmd,"buzzer_status")==0){
+    Serial.println(F("Buzzer listo"));
+  }
   else if(strcmp(cmd,"alarm")==0){
     alarm();
     Serial.println(F("Alarma sonó"));
