@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`;
         }
 
-        function moduleCard(name, status) {
+        function moduleCard(name, status, extraCls = '') {
             let cls = '';
             let stateCls = 'checking';
             let label = 'Verificando...';
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 label = ok ? 'Operativo' : 'Fallo';
             }
             return `
-            <div class="module-card ${cls} shadow" data-module="${name}">
+            <div class="module-card ${cls} shadow ${extraCls}" data-module="${name}">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2">
                   <i data-feather="cpu" class="module-icon"></i>
@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="module-grid">
-                ${moduleCard('Arduino')}
+                ${moduleCard('Arduino', undefined, 'module-main')}
                 ${moduleCard('PIR Sensor')}
                 ${moduleCard('RFID Reader')}
                 ${moduleCard('Ultrasonido')}
