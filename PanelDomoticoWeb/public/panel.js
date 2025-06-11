@@ -531,43 +531,6 @@ const applyBtnStyle = () => {};
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
-                } else {
-                    updateTemp(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateTemp(null);
-            }
-            updateHistoryDisplay();
-        }
-        async function refreshConsumption() {
-            try {
-                const data = await api('/comando/consumo');
-                const c = parseNumber(data.resultado);
-                if (c !== null) {
-                    updateConsumption(c);
-                } else {
-                    updateConsumption(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateConsumption(null);
-            }
-        }
-        function startPolling() {
-            refreshTemp();
-            refreshConsumption();
-            setInterval(refreshTemp, 10000);
-            setInterval(refreshConsumption, 15000);
-        }
-        async function refreshTemp() {
-            try {
-                const data = await api('/comando/leertemp');
-                const val = parseNumber(data.resultado);
-                if (val !== null) {
-                    updateTemp(val);
-                    tempHistory.push(val);
-                    if (tempHistory.length > 12) tempHistory.shift();
                     if (tempChart) {
                         const now = new Date();
                         const labels = tempHistory.map((_, i) => {
