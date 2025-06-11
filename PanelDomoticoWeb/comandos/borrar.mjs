@@ -1,7 +1,8 @@
 import sendSerial from '../util/sendSerial.mjs';
 
-export default async function () {
-    // Aquí como ejemplo usa ID = 5; en el futuro enviaremos el ID desde el frontend.
-    const id = 5;
+export default async function (id) {
+    if (!id && id !== 0) {
+        throw new Error('ID de huella requerido');
+    }
     return await sendSerial(`borrar ${id}`);
 }
