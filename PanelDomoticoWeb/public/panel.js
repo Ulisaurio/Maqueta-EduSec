@@ -621,6 +621,7 @@ const applyBtnStyle = () => {};
         };
 
         let moduleInterval;
+        const delay = ms => new Promise(res => setTimeout(res, ms));
 
         function setCheckingStatuses() {
             document.querySelectorAll('.module-card').forEach(card => {
@@ -656,9 +657,11 @@ const applyBtnStyle = () => {};
 
         function startModuleMonitoring() {
             setCheckingStatuses();
-            checkAllModules();
-            clearInterval(moduleInterval);
-            moduleInterval = setInterval(checkAllModules, 60000);
+            setTimeout(() => {
+                checkAllModules();
+                clearInterval(moduleInterval);
+                moduleInterval = setInterval(checkAllModules, 60000);
+            }, 2000);
         }
         async function verifyModule(mod, btn) {
             if (btn) {
@@ -675,6 +678,7 @@ const applyBtnStyle = () => {};
                     span.classList.remove('operational', 'faulty');
                     span.textContent = 'Verificando...';
                 }
+                await delay(2000);
                 let ok = false;
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
