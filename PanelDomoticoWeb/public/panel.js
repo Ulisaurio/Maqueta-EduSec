@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const showArduinoReminder = () => {
-        toast('⚠️ Arduino no conectado', null, false, 'alert-critical');
+        toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
     };
 
         // Generadores de tarjetas
@@ -266,12 +266,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="module-grid">
+                ${moduleCard('Arduino')}
                 ${moduleCard('PIR Sensor')}
                 ${moduleCard('RFID Reader')}
                 ${moduleCard('Ultrasonido')}
-                ${moduleCard('Flama/Agua Sensor')}
                 ${moduleCard('Buzzer')}
-                ${moduleCard('Display LCD')}
               </div>
             </section>`,
 
@@ -357,11 +356,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = (msg, duration = 3000, dismissable = true, cls = 'bg-slate-800 text-white') => {
+        const toast = (msg, duration = 3000, dismissable = true,
+                      cls = 'bg-slate-800 text-white', icon = null) => {
             const t = document.createElement('div');
-            t.className = `${cls} px-4 py-2 rounded shadow flex items-center gap-2`;
+            t.className = `toast ${cls} px-4 py-3 rounded-full shadow-lg flex items-center gap-2`;
+            if (icon) {
+                const ic = document.createElement('i');
+                ic.dataset.feather = icon;
+                ic.className = 'w-4 h-4';
+                t.appendChild(ic);
+            }
             const span = document.createElement('span');
             span.textContent = msg;
+            span.className = 'font-medium';
             t.appendChild(span);
             if (dismissable) {
                 const btn = document.createElement('button');
@@ -371,7 +378,11 @@ const applyBtnStyle = () => {};
             }
             toastContainer.appendChild(t);
             feather.replace();
-            if (duration !== null) setTimeout(() => t.remove(), duration);
+            if (duration !== null) {
+                let timer = setTimeout(() => t.remove(), duration);
+                t.addEventListener('mouseenter', () => clearTimeout(timer));
+                t.addEventListener('mouseleave', () => timer = setTimeout(() => t.remove(), duration));
+            }
         };
 
         function clockTick() {
@@ -491,9 +502,8 @@ const applyBtnStyle = () => {};
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
@@ -594,12 +604,11 @@ const applyBtnStyle = () => {};
             }
         }
         const moduleActions = {
+            'Arduino': 'arduino_status',
             'PIR Sensor': 'pir',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
-            'Flama/Agua Sensor': 'alarm',
-            'Buzzer': 'alarm',
-            'Display LCD': 'rgb_red'
+            'Buzzer': 'alarm'
         };
 
         let moduleInterval;
@@ -657,9 +666,16 @@ const applyBtnStyle = () => {};
                     span.classList.remove('operational', 'faulty');
                     span.textContent = 'Verificando...';
                 }
-                const data = await api(`/comando/${accion}`);
-                toast(`Resultado de ${mod}: ${data.resultado}`);
-                const ok = /OK/i.test(data.resultado || '');
+                let ok = false;
+                if (accion === 'arduino_status') {
+                    const data = await api('/status/arduino');
+                    ok = !!data.available;
+                    toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
+                } else {
+                    const data = await api(`/comando/${accion}`);
+                    toast(`Resultado de ${mod}: ${data.resultado}`);
+                    ok = /OK/i.test(data.resultado || '');
+                }
                 updateModuleCard(mod, ok);
             } catch (err) {
                 toast(err.message);
