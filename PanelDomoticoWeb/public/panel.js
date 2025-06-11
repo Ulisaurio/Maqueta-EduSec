@@ -184,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${card('shield', 'Seguridad del Sistema', '<span id="modulesSummary" class="font-medium">--</span>', 'bg-green-100 text-green-700')}
+                ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-success-soft text-success')}
                 ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
@@ -207,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex items-center gap-2">
                       <input type="date" id="filterDate" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent text-sm"
                              value="${new Date().toISOString().substring(0, 10)}" onchange="updateAccessTable(this.value)">
-                      <button onclick="exportAccessCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb5] text-white rounded text-sm">Exportar CSV</button>
+                      <button onclick="exportAccessCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>
                     </div>
                   </div>
                   <div id="accessContainer"></div>
