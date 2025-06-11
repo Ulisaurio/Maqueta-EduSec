@@ -30,8 +30,8 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-String bufferIn;
-bool   cmdReady = false;
+#define CMD_BUF_SIZE 64
+char    cmdBuffer[CMD_BUF_SIZE];
 
 // Helper to set RGB LED
 const bool COMMON_CATHODE = true;
@@ -51,6 +51,7 @@ void rgbOff(){ setRGB(0,0,0); }
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+  Serial.setTimeout(10); // short timeout for readBytesUntil
 
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
@@ -134,43 +135,43 @@ void sonarAlarma() {
 }
 
 void loop() {
-  while (Serial.available()) {
-    char c = Serial.read();
-    if (c == '\r') continue;
-    if (c == '\n') { cmdReady = true; break; }
-    bufferIn += c;
+  if (!Serial.available()) return;
+
+  size_t len = Serial.readBytesUntil('\n', cmdBuffer, CMD_BUF_SIZE - 1);
+  cmdBuffer[len] = '\0';
+  if (len > 0 && cmdBuffer[len - 1] == '\r') cmdBuffer[len - 1] = '\0';
+
+  char *cmd = cmdBuffer;
+  while (*cmd == ' ' || *cmd == '\t') cmd++;
+  size_t end = strlen(cmd);
+  while (end > 0 && (cmd[end - 1] == ' ' || cmd[end - 1] == '\t')) {
+    cmd[--end] = '\0';
   }
-  if (!cmdReady) return;
 
-  String cmd = bufferIn;
-  cmd.trim();
-  bufferIn = "";
-  cmdReady = false;
-
-  if (cmd == "abrir") {
+  if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
     Serial.println("Puerta abierta");
   }
-  else if (cmd == "cerrar") {
+  else if (strcmp(cmd, "cerrar") == 0) {
     digitalWrite(RELAY_PIN, HIGH);
     Serial.println("Puerta cerrada");
   }
-  else if (cmd.startsWith("enrolar ")) {
-    int id = cmd.substring(8).toInt();
+  else if (strncmp(cmd, "enrolar ", 8) == 0) {
+    int id = atoi(cmd + 8);
     uint8_t r = enrolarHuella(id);
     if (r == 0) Serial.println("Huella enrolada");
     else Serial.println("Error enrolando");
   }
-  else if (cmd.startsWith("borrar ")) {
-    int id = cmd.substring(7).toInt();
+  else if (strncmp(cmd, "borrar ", 7) == 0) {
+    int id = atoi(cmd + 7);
     if (borrarHuella(id) == FINGERPRINT_OK) Serial.println("Huella borrada");
     else Serial.println("Error borrando");
   }
-  else if (cmd == "huella") {
+  else if (strcmp(cmd, "huella") == 0) {
     if (verificarHuella()) Serial.println("Huella válida");
     else Serial.println("Huella no válida");
   }
-  else if (cmd == "distancia") {
+  else if (strcmp(cmd, "distancia") == 0) {
     long dur = leerDistancia();
     if (dur == 0) Serial.println("Distancia: error");
     else {
@@ -180,12 +181,12 @@ void loop() {
       Serial.println(" cm");
     }
   }
-  else if (cmd == "pir") {
+  else if (strcmp(cmd, "pir") == 0) {
     int v = digitalRead(PIR_PIN);
     Serial.print("PIR: ");
     Serial.println(v);
   }
-  else if (cmd == "rfid") {
+  else if (strcmp(cmd, "rfid") == 0) {
     if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
       Serial.print("UID: ");
       for (byte i = 0; i < rfid.uid.size; i++) {
@@ -199,25 +200,25 @@ void loop() {
       Serial.println("Sin tarjeta");
     }
   }
-  else if (cmd == "voltaje") {
+  else if (strcmp(cmd, "voltaje") == 0) {
     float v = leerVoltaje();
     Serial.print("Voltaje: ");
     Serial.print(v, 2);
     Serial.println(" V");
   }
-  else if (cmd == "alarm") {
+  else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
     Serial.println("Alarma sonó");
   }
-  else if (cmd.startsWith("rgb ")) {
-    String c = cmd.substring(4);
-    if (c == "red")      setRGB(255,0,0);
-    else if (c == "green") setRGB(0,255,0);
-    else if (c == "blue")  setRGB(0,0,255);
-    else if (c == "off")   rgbOff();
+  else if (strncmp(cmd, "rgb ", 4) == 0) {
+    const char *c = cmd + 4;
+    if (strcmp(c, "red") == 0)      setRGB(255,0,0);
+    else if (strcmp(c, "green") == 0) setRGB(0,255,0);
+    else if (strcmp(c, "blue") == 0)  setRGB(0,0,255);
+    else if (strcmp(c, "off") == 0)   rgbOff();
     Serial.println("RGB listo");
   }
-  else if (cmd == "leertemp") {
+  else if (strcmp(cmd, "leertemp") == 0) {
     sensors.requestTemperatures();
     float t = sensors.getTempCByIndex(0);
     if (t == DEVICE_DISCONNECTED_C) {
