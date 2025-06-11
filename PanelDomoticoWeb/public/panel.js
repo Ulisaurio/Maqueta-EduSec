@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     interaction: { mode: 'nearest', intersect: false }
                 }
             });
-            updateTemp(temps[temps.length - 1]);
+            refreshTemp();
         }
 
         // Tabla de accesos diarios
@@ -321,10 +321,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         setInterval(clockTick, 1000);
 
-        function cmd(a) {
-            toast(`Comando ${a}`);
-            if (a === 'abrir') updateDoor('🔓 Abierta');
-            if (a === 'cerrar') updateDoor('🔒 Cerrada');
+        async function cmd(a) {
+            try {
+                const data = await api(`/comando/${a}`);
+                toast(data.resultado || `Comando ${a}`);
+                if (a === 'abrir') updateDoor('🔓 Abierta');
+                if (a === 'cerrar') updateDoor('🔒 Cerrada');
+            } catch (err) {
+                toast(err.message);
+            }
         }
         function updateDoor(s) {
             document.querySelectorAll('#doorState, #homeDoorState').forEach(el => {
@@ -337,6 +342,32 @@ document.addEventListener("DOMContentLoaded", () => {
             if (t1) t1.textContent = `${v}°C`;
             if (t2) t2.textContent = `${v}°C`;
         }
+        async function refreshTemp() {
+            try {
+                const data = await api('/comando/leertemp');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) updateTemp(parseFloat(m[1]));
+            } catch (err) { toast(err.message); }
+        }
+        async function refreshVoltage() {
+            try {
+                const data = await api('/comando/voltaje');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    const v = parseFloat(m[1]);
+                    const bar = document.getElementById('voltageBar');
+                    const lvl = document.getElementById('voltageLevel');
+                    if (bar) bar.style.width = `${Math.min(v,100)}%`;
+                    if (lvl) lvl.textContent = `${v}V`;
+                }
+            } catch (err) { toast(err.message); }
+        }
+        function startPolling() {
+            refreshTemp();
+            refreshVoltage();
+            setInterval(refreshTemp, 10000);
+            setInterval(refreshVoltage, 15000);
+        }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
             if (d) d.classList.toggle('hidden');
@@ -347,18 +378,32 @@ document.addEventListener("DOMContentLoaded", () => {
         function exportAccessCSV() {
             toast('Exportando CSV... (simulado)');
         }
-        function verifyModule(mod, btn) {
+        const moduleActions = {
+            'PIR Sensor': 'pir',
+            'RFID Reader': 'rfid',
+            'Ultrasonido': 'distancia',
+            'Flama/Agua Sensor': 'alarm',
+            'Buzzer': 'alarm',
+            'Display LCD': 'rgb_red'
+        };
+        async function verifyModule(mod, btn) {
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner"></span>';
             }
-            setTimeout(() => {
+            const accion = moduleActions[mod];
+            try {
+                if (!accion) throw new Error('No soportado');
+                const data = await api(`/comando/${accion}`);
+                toast(`Resultado de ${mod}: ${data.resultado}`);
+            } catch (err) {
+                toast(err.message);
+            } finally {
                 if (btn) {
                     btn.disabled = false;
                     btn.textContent = 'Verificar';
                 }
-                toast(`Resultado de ${mod}: OK`);
-            }, 1000);
+            }
         }
 
         // Variables globales
@@ -394,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     loadingOverlay.classList.add('hidden');
                     initMenu();
                     document.querySelector('#menu button').click();
+                    startPolling();
                 }, 600);
             } catch (err) {
                 loginError.textContent = err.message;
