@@ -164,9 +164,9 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-green-100 text-green-700')}
-                ${card('lock', 'Puerta', `<span id="homeDoorState">🔒 Cerrada</span>`, 'bg-gray-100 dark:bg-gray-700')}
-                ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">24°C</span>', 'bg-blue-100 text-blue-700')}
-                ${sensorCard('droplet', 'Humedad', '<span id="humValue">45%</span>', 'bg-cyan-100 text-cyan-700')}
+                ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
+                ${sensorCard('droplet', 'Humedad', '<span id="humValue">--</span>', 'bg-cyan-100 text-cyan-700')}
               </div>
               <div class="mt-6">
                 <h4 class="text-lg font-semibold mb-2">Histórico de Temperatura (últimas 12 horas)</h4>
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control de Acceso</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${card('lock', 'Estado Puerta', `<span id="doorState">🔒 Cerrada</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Estado Puerta', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
                     <h4 class="font-bold">Accesos del Día</h4>
@@ -238,13 +238,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
                   <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
-                    <div id="voltageBar" class="bg-indigo-500 h-4 rounded-full" style="width: 65%"></div>
+                    <div id="voltageBar" class="bg-indigo-500 h-4 rounded-full" style="width: 0%"></div>
                   </div>
-                  <p class="text-sm"><span id="voltageLevel" class="font-medium">65V</span></p>
+                  <p class="text-sm"><span id="voltageLevel" class="font-medium">--</span></p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Consumo aproximado en amperios">
                   <div class="flex items-center gap-2"><i data-feather="cpu" class="text-xl"></i><h4 class="font-bold">Consumo</h4></div>
-                  <p class="text-sm"><span id="powerConsumption" class="font-medium">1.5A</span></p>
+                  <p class="text-sm"><span id="powerConsumption" class="font-medium">--</span></p>
                 </div>
               </div>
             </section>`,
@@ -327,9 +327,10 @@ document.addEventListener("DOMContentLoaded", () => {
         async function cmd(a) {
             try {
                 const data = await api(`/comando/${a}`);
-                toast(data.resultado || `Comando ${a}`);
-                if (a === 'abrir') updateDoor('🔓 Abierta');
-                if (a === 'cerrar') updateDoor('🔒 Cerrada');
+                const msg = data.resultado || `Comando ${a}`;
+                toast(msg);
+                if (/abierta/i.test(msg)) updateDoor('🔓 Abierta');
+                if (/cerrada/i.test(msg)) updateDoor('🔒 Cerrada');
             } catch (err) {
                 toast(err.message);
             }
@@ -340,10 +341,49 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
         function updateTemp(v) {
+            const txt = v === null ? '--' : `${v}°C`;
             const t1 = document.getElementById('tempValue');
             const t2 = document.getElementById('tempHeader');
-            if (t1) t1.textContent = `${v}°C`;
-            if (t2) t2.textContent = `${v}°C`;
+            if (t1) t1.textContent = txt;
+            if (t2) t2.textContent = txt;
+        }
+        function updateVoltage(v) {
+            const bar = document.getElementById('voltageBar');
+            const lvl = document.getElementById('voltageLevel');
+            if (bar) bar.style.width = v === null ? '0%' : `${Math.min(v,100)}%`;
+            if (lvl) lvl.textContent = v === null ? '--' : `${v}V`;
+        }
+        async function refreshTemp() {
+            try {
+                const data = await api('/comando/leertemp');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) updateTemp(parseFloat(m[1]));
+                else updateTemp(null);
+            } catch (err) {
+                toast(err.message);
+                updateTemp(null);
+            }
+        }
+        async function refreshVoltage() {
+            try {
+                const data = await api('/comando/voltaje');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    const v = parseFloat(m[1]);
+                    updateVoltage(v);
+                } else {
+                    updateVoltage(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateVoltage(null);
+            }
+        }
+        function startPolling() {
+            refreshTemp();
+            refreshVoltage();
+            setInterval(refreshTemp, 10000);
+            setInterval(refreshVoltage, 15000);
         }
         async function refreshTemp() {
             try {
