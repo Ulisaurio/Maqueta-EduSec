@@ -19,8 +19,17 @@ document.addEventListener("DOMContentLoaded", () => {
         arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
     }
 
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !arduinoAlert.classList.contains('hidden')) {
+            arduinoAlert.classList.add('hidden');
+        }
+    });
+
     const showArduinoAlert = () => {
-        if (arduinoAlert) arduinoAlert.classList.remove('hidden');
+        if (arduinoAlert) {
+            arduinoAlert.classList.remove('hidden');
+            feather.replace();
+        }
     };
 
     const showArduinoReminder = () => {
