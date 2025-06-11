@@ -194,7 +194,7 @@ body {
 /* Layout for module cards */
 .module-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 1.5rem;
 }
 
@@ -207,7 +207,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-width: 15rem;
+    min-width: 13rem;
 }
 
 .module-status {
