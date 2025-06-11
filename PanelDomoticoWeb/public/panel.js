@@ -810,6 +810,29 @@ const applyBtnStyle = () => {};
                 if (lastDoorOpen !== null) addSecurityLog('Ultrasonido sin respuesta');
                 lastDoorOpen = null;
             }
+
+            try {
+                const rfidData = await api('/comando/rfid');
+                const m = /UID:\s*([A-F0-9:]+)/i.exec(rfidData.resultado || '');
+                const uid = m ? m[1].toUpperCase() : null;
+                if (uid) {
+                    addSecurityLog(`RFID: ${uid}`);
+                    const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                    if (systemArmed && val) {
+                        try {
+                            await api('/system-state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ armed: false })
+                            });
+                            systemArmed = false;
+                            updateSystemStateUI();
+                            addSecurityLog('Sistema desarmado por RFID');
+                            cmd('abrir');
+                        } catch {}
+                    }
+                }
+            } catch {}
         }
 
         async function startSecurityMonitoring() {
