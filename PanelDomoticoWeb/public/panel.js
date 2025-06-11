@@ -180,11 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr>
-                    <th class="px-3 py-2 text-left">ID Huella</th>
-                    <th class="px-3 py-2 text-left">Usuario</th>
-                    <th class="px-3 py-2 text-left">Acciones</th>
-                  </tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Usuario</th></tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -265,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button onclick="toggleFingerAdmin()" class="btn w-full text-base">Administrar Huellas</button>
                 <div id="fingerAdmin" class="hidden space-y-4">
                   ${fingerTable()}
-                  <button id="addFingerBtn" class="btn w-full">Agregar Nueva Huella</button>
+                  <button id="addHuellaBtn" class="btn w-full">Agregar Nueva Huella</button>
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
@@ -576,6 +572,47 @@ const applyBtnStyle = () => {};
             d.classList.toggle('hidden');
             if (wasHidden && !d.classList.contains('hidden')) {
                 loadHuellas();
+            }
+        }
+
+        async function showEnrollModal() {
+            const users = await fetchUsers();
+            if (!users.length) return;
+            const options = users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+            const div = document.createElement('div');
+            div.id = 'enrollModal';
+            div.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            div.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72">
+                <h4 class="font-bold">Asignar Huella</h4>
+                <select id="enrollUserSel" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">${options}</select>
+                <div class="flex justify-end gap-2">
+                  <button id="cancelEnroll" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
+                  <button id="confirmEnroll" class="btn btn-sm">Enrolar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(div);
+            feather.replace();
+            div.querySelector('#cancelEnroll').onclick = () => div.remove();
+            div.querySelector('#confirmEnroll').onclick = async () => {
+                const uid = parseInt(div.querySelector('#enrollUserSel').value, 10);
+                div.remove();
+                await enrollFinger(uid);
+            };
+        }
+
+        async function enrollFinger(usuarioId) {
+            if (!usuarioId) return;
+            try {
+                await api('/huellas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_id: usuarioId })
+                });
+                loadHuellas();
+                toast('Huella enrolada');
+            } catch (err) {
+                toast(err.message);
             }
         }
         async function updateAccessTable(dateStr) {
@@ -938,20 +975,22 @@ const applyBtnStyle = () => {};
             }
         }
 
+        async function fetchUsers() {
+            try {
+                return await api('/users');
+            } catch {
+                toast('Error cargando usuarios');
+                return [];
+            }
+        }
+
         function renderHuellas(list) {
             const tbody = document.getElementById('fingerTBody');
             if (!tbody) return;
             tbody.innerHTML = '';
             list.forEach(item => {
-                const fid = item.huella_id || item.id;
-                const user = item.username || '-';
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                  <td class="px-3 py-1">${fid}</td>
-                  <td class="px-3 py-1">${user}</td>
-                  <td class="px-3 py-1">
-                    <button class="delFinger btn btn-sm btn-danger" data-id="${fid}">Eliminar</button>
-                  </td>`;
+                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${item.username}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -1032,18 +1071,8 @@ const applyBtnStyle = () => {};
                 toast('Buscando actualizaciones...');
             } else if (e.target.closest('#restartModulesBtn')) {
                 toast('Reiniciando módulos...');
-            } else if (e.target.closest('#addFingerBtn')) {
-                try {
-                    await api('/huellas', { method: 'POST' });
-                    loadHuellas();
-                } catch (err) { toast(err.message); }
-            } else if (e.target.classList.contains('delFinger')) {
-                const id = e.target.dataset.id;
-                if (!confirm('¿Eliminar huella?')) return;
-                try {
-                    await api(`/huellas/${id}`, { method: 'DELETE' });
-                    loadHuellas();
-                } catch (err) { toast(err.message); }
+            } else if (e.target.closest('#addHuellaBtn')) {
+                showEnrollModal();
             }
         });
 
@@ -1073,6 +1102,7 @@ const applyBtnStyle = () => {};
         window.updateAccessTable = updateAccessTable;
         window.exportAccessCSV = exportAccessCSV;
         window.verifyModule = verifyModule;
+        window.showEnrollModal = showEnrollModal;
 
         // Inicializar Feather Icons
         feather.replace();
