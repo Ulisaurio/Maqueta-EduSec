@@ -675,7 +675,9 @@ const applyBtnStyle = () => {};
                     span.classList.remove('operational', 'faulty');
                     span.textContent = 'Verificando...';
                 }
-                await delay(2000);
+                if (showChecking) {
+                    await delay(2000);
+                }
                 let ok = false;
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
