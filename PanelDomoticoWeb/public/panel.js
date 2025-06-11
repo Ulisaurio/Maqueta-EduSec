@@ -321,6 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'home') renderSparkline();
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
+            if (id === 'monitoreo') startModuleMonitoring();
         }
 
 
