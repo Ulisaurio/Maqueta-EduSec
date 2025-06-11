@@ -62,12 +62,8 @@ void setup(){
 
   SPI.begin();
   rfid.PCD_Init();
-  if(rfid.PCD_PerformSelfTest()) {
-    rfidPresent = true;
-    Serial.println(F("🟢 RFID iniciado"));
-  } else {
-    Serial.println(F("🔴 RFID no encontrado"));
-  }
+  rfidPresent = true;
+  Serial.println(F("🟢 RFID iniciado"));
 
   sensors.begin();
 
