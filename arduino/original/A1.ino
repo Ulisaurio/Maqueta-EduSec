@@ -61,12 +61,12 @@ void loop() {
 
   if (cmd.equalsIgnoreCase("abrir")) {
     digitalWrite(RELAY_PIN, LOW);
-    Serial.println("Puerta abierta");
+    Serial.println("Acceso principal abierto");
     return;
   }
   if (cmd.equalsIgnoreCase("cerrar")) {
     digitalWrite(RELAY_PIN, HIGH);
-    Serial.println("Puerta cerrada");
+    Serial.println("Acceso principal cerrado");
     return;
   }
 

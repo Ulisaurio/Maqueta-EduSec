@@ -204,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-success-soft text-success')}
-                ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Acceso principal', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
               <div class="mt-6">
@@ -217,12 +217,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             acceso: `
             <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control de Acceso</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control del Acceso principal</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${card('lock', 'Estado Puerta', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Estado del Acceso principal', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
-                    <h4 class="font-bold">Accesos del Día</h4>
+                    <h4 class="font-bold">Accesos del Acceso principal</h4>
                     <div class="flex items-center gap-2">
                       <input type="date" id="filterDate" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent text-sm"
                              value="${new Date().toISOString().substring(0, 10)}" onchange="updateAccessTable(this.value)">
@@ -245,8 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
-                  <button onclick="cmd('abrir')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Abrir Puerta</button>
-                  <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Puerta</button>
+                  <button onclick="cmd('abrir')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Abrir Acceso principal</button>
+                  <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
             </section>`,
@@ -306,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Definición del menú lateral
         const menuDef = [
             ["home", "home", "Inicio"],
-            ["acceso", "lock", "Acceso"],
+            ["acceso", "lock", "Acceso principal"],
             ["monitoreo", "activity", "Monitoreo"],
             ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
