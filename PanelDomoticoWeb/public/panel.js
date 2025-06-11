@@ -37,10 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function moduleCard(name, status) {
-            const ok = status.toUpperCase() !== 'NO';
-            const cls = ok ? 'module-ok' : 'module-fail';
-            const stateCls = ok ? 'operational' : 'faulty';
-            const label = ok ? 'Operativo' : 'Fallo';
+            let cls = '';
+            let stateCls = 'checking';
+            let label = 'Verificando...';
+            if (status) {
+                const ok = status.toUpperCase() !== 'NO';
+                cls = ok ? 'module-ok' : 'module-fail';
+                stateCls = ok ? 'operational' : 'faulty';
+                label = ok ? 'Operativo' : 'Fallo';
+            }
             return `
             <div class="module-card ${cls} shadow" data-module="${name}">
               <div class="flex items-start justify-between">
@@ -199,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-success-soft text-success')}
-                ${card('lock', 'Puerta', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Acceso principal', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
               <div class="mt-6">
@@ -212,12 +217,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             acceso: `
             <section class="space-y-6">
-              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control de Acceso</h3>
+              <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control del Acceso principal</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${card('lock', 'Estado Puerta', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                ${card('lock', 'Estado', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
-                    <h4 class="font-bold">Accesos del Día</h4>
+                    <h4 class="font-bold">Accesos del Acceso principal</h4>
                     <div class="flex items-center gap-2">
                       <input type="date" id="filterDate" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent text-sm"
                              value="${new Date().toISOString().substring(0, 10)}" onchange="updateAccessTable(this.value)">
@@ -240,8 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
-                  <button onclick="cmd('abrir')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Abrir Puerta</button>
-                  <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Puerta</button>
+                  <button onclick="cmd('abrir')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Abrir Acceso principal</button>
+                  <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
             </section>`,
@@ -250,12 +255,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="activity"></i>Monitoreo</h3>
               <div class="module-grid">
-                ${moduleCard('PIR Sensor', 'OK')}
-                ${moduleCard('RFID Reader', 'OK')}
-                ${moduleCard('Ultrasonido', 'OK')}
-                ${moduleCard('Flama/Agua Sensor', 'NO')}
-                ${moduleCard('Buzzer', 'OK')}
-                ${moduleCard('Display LCD', 'NO')}
+                ${moduleCard('PIR Sensor')}
+                ${moduleCard('RFID Reader')}
+                ${moduleCard('Ultrasonido')}
+                ${moduleCard('Flama/Agua Sensor')}
+                ${moduleCard('Buzzer')}
+                ${moduleCard('Display LCD')}
               </div>
             </section>`,
 
@@ -301,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Definición del menú lateral
         const menuDef = [
             ["home", "home", "Inicio"],
-            ["acceso", "lock", "Acceso"],
+            ["acceso", "lock", "Acceso principal"],
             ["monitoreo", "activity", "Monitoreo"],
             ["energia", "zap", "Alimentación"],
             ["cuentas", "users", "Cuentas"],
@@ -421,12 +426,19 @@ const applyBtnStyle = () => {};
             const el = document.getElementById('modulesSummary');
             if (el) el.textContent = modulesSummary();
         }
+        function parseNumber(str) {
+            if (!str || /(no disponible|error|timeout|sin respuesta)/i.test(str)) {
+                return null;
+            }
+            const m = /([-+]?\d+(?:\.\d+)?)/.exec(str);
+            return m ? parseFloat(m[1]) : null;
+        }
+
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
@@ -442,9 +454,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -459,9 +470,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
@@ -481,9 +492,8 @@ const applyBtnStyle = () => {};
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const val = parseFloat(m[1]);
+                const val = parseNumber(data.resultado);
+                if (val !== null) {
                     updateTemp(val);
                     tempHistory.push(val);
                     if (tempHistory.length > 12) tempHistory.shift();
@@ -509,9 +519,8 @@ const applyBtnStyle = () => {};
         async function refreshVoltage() {
             try {
                 const data = await api('/comando/voltaje');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    const v = parseFloat(m[1]);
+                const v = parseNumber(data.resultado);
+                if (v !== null) {
                     updateVoltage(v);
                 } else {
                     updateVoltage(null);
@@ -526,9 +535,9 @@ const applyBtnStyle = () => {};
         async function refreshConsumption() {
             try {
                 const data = await api('/comando/consumo');
-                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) {
-                    updateConsumption(parseFloat(m[1]));
+                const c = parseNumber(data.resultado);
+                if (c !== null) {
+                    updateConsumption(c);
                 } else {
                     updateConsumption(null);
                 }
@@ -589,6 +598,18 @@ const applyBtnStyle = () => {};
 
         let moduleInterval;
 
+        function setCheckingStatuses() {
+            document.querySelectorAll('.module-card').forEach(card => {
+                const span = card.querySelector('[data-status]');
+                card.classList.remove('module-ok', 'module-fail');
+                if (span) {
+                    span.classList.remove('operational', 'faulty');
+                    span.classList.add('checking');
+                    span.textContent = 'Verificando...';
+                }
+            });
+        }
+
         function updateModuleCard(mod, ok) {
             const card = document.querySelector(`.module-card[data-module="${mod}"]`);
             if (!card) return;
@@ -596,6 +617,7 @@ const applyBtnStyle = () => {};
             card.classList.toggle('module-ok', ok);
             card.classList.toggle('module-fail', !ok);
             if (span) {
+                span.classList.remove('checking');
                 span.classList.toggle('operational', ok);
                 span.classList.toggle('faulty', !ok);
                 span.textContent = ok ? 'Operativo' : 'Fallo';
@@ -609,6 +631,7 @@ const applyBtnStyle = () => {};
         }
 
         function startModuleMonitoring() {
+            setCheckingStatuses();
             checkAllModules();
             clearInterval(moduleInterval);
             moduleInterval = setInterval(checkAllModules, 60000);
@@ -621,6 +644,13 @@ const applyBtnStyle = () => {};
             const accion = moduleActions[mod];
             try {
                 if (!accion) throw new Error('No soportado');
+                const card = document.querySelector(`.module-card[data-module="${mod}"]`);
+                const span = card ? card.querySelector('[data-status]') : null;
+                if (span) {
+                    span.classList.add('checking');
+                    span.classList.remove('operational', 'faulty');
+                    span.textContent = 'Verificando...';
+                }
                 const data = await api(`/comando/${accion}`);
                 toast(`Resultado de ${mod}: ${data.resultado}`);
                 const ok = /OK/i.test(data.resultado || '');
