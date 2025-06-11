@@ -57,26 +57,16 @@ void setup() {
   Serial1.begin(57600);
   finger.begin(57600);
   fingerPresent = finger.verifyPassword();
-  if (!fingerPresent) {
-    // Some modules use 9600 bps by default
-    Serial1.end();
-    Serial1.begin(9600);
-    finger.begin(9600);
-    fingerPresent = finger.verifyPassword();
+  if (fingerPresent) {
+    Serial.println(F("🟢 Sensor de huella detectado"));
+  } else {
+    Serial.println(F("🔴 Sensor de huella NO detectado"));
   }
-  if (!fingerPresent) Serial.println(F("⚠️ Huella no detectada"));
-  else Serial.println(F("Sensor de huella listo"));
 
   SPI.begin();
   rfid.PCD_Init();
-  byte ver = rfid.PCD_ReadRegister(MFRC522::VersionReg);
-  if (ver == 0x00 || ver == 0xFF) {
-    Serial.println(F("⚠️ RFID no detectado"));
-    rfidPresent = false;
-  } else {
-    Serial.println(F("RFID listo"));
-    rfidPresent = true;
-  }
+  Serial.println(F("🟢 RFID iniciado"));
+  rfidPresent = true;
 
   sensors.begin();
 
