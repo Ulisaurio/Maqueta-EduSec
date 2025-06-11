@@ -178,6 +178,23 @@ body {
     transition: all 0.2s ease-in-out;
 }
 
+.module-status {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 500;
+}
+
+.module-ok {
+    background-color: #16a34a; /* green-600 */
+    color: white;
+}
+
+.module-fail {
+    background-color: #dc2626; /* red-600 */
+    color: white;
+}
+
 .verify-btn {
     transition: all 0.2s ease-in-out;
 }
