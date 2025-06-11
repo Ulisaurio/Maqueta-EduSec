@@ -453,7 +453,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     await api(`/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) });
                     loadUsers();
-                } catch (err) { toast(err.message); }
+                } catch (err) {
+                    toast(err.message);
+                    // revert visual toggle if update failed
+                    e.target.checked = !e.target.checked;
+                    loadUsers();
+                }
             }
         });
 
