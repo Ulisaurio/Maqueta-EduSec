@@ -5,7 +5,15 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { getDb, initDb, addHuella, deleteHuella } from './db.js';
+import {
+    getDb,
+    initDb,
+    addHuella,
+    deleteHuella,
+    addRfidCard,
+    getRfidCards,
+    deleteRfidCard
+} from './db.js';
 import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
@@ -264,6 +272,70 @@ app.delete('/huellas/:id', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Gestión de tarjetas RFID ---------
+app.get('/rfid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        const rows = await getRfidCards();
+        res.json(rows);
+    } catch (err) {
+        console.error('Error en GET /rfid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.post('/rfid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { uid, usuario_id } = req.body;
+    if (!uid || !usuario_id) {
+        return res.status(400).json({ msg: 'uid y usuario_id requeridos' });
+    }
+    try {
+        await addRfidCard({ uid, usuario_id });
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'rfid_add', uid]
+        );
+        res.json({ uid, usuario_id });
+    } catch (err) {
+        console.error('Error en POST /rfid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.delete('/rfid/:uid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { uid } = req.params;
+    try {
+        await deleteRfidCard(uid);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'rfid_del', uid]
+        );
+        res.json({ msg: 'Tarjeta eliminada' });
+    } catch (err) {
+        console.error('Error en DELETE /rfid/:uid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.get('/rfid/validate/:uid', authenticateToken, async (req, res) => {
+    const { uid } = req.params;
+    try {
+        const row = await db.get('SELECT 1 FROM rfid_cards WHERE uid = ?', [uid]);
+        res.json({ valid: !!row });
+    } catch (err) {
+        console.error('Error en GET /rfid/validate/:uid:', err);
+        res.status(500).json({ msg: 'Error interno' });
     }
 });
 

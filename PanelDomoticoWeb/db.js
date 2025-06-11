@@ -66,6 +66,16 @@ export async function initDb() {
     )
   `);
 
+    // Tabla de tarjetas RFID
+    await db.exec(`
+    CREATE TABLE IF NOT EXISTS rfid_cards (
+      uid TEXT PRIMARY KEY,
+      usuario_id INTEGER NOT NULL,
+      creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+    )
+  `);
+
     // Revisar si existe al menos un usuario root por defecto; si no, lo creamos
     const row = await db.get(`SELECT COUNT(*) AS count FROM usuarios`);
     if (row.count === 0) {
@@ -133,4 +143,24 @@ export async function updateHuella(id, { usuario_id, huella_id }) {
 export async function deleteHuella(huellaId) {
     const db = await getDb();
     return db.run('DELETE FROM huellas WHERE huella_id = ?', [huellaId]);
+}
+
+// ----- CRUD helpers for RFID cards -----
+
+export async function addRfidCard({ uid, usuario_id }) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO rfid_cards (uid, usuario_id) VALUES (?, ?)`,
+        [uid, usuario_id]
+    );
+}
+
+export async function getRfidCards() {
+    const db = await getDb();
+    return db.all(`SELECT * FROM rfid_cards`);
+}
+
+export async function deleteRfidCard(uid) {
+    const db = await getDb();
+    return db.run('DELETE FROM rfid_cards WHERE uid = ?', [uid]);
 }
