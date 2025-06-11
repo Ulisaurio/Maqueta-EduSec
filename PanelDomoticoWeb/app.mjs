@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { getDb, initDb } from './db.js';
+import { getDb, initDb, addHuella, deleteHuella } from './db.js';
 import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
