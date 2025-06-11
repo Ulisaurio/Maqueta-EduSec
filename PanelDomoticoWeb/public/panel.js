@@ -47,9 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function moduleCard(name, status, extraCls = '') {
             let cls = '';
-            let stateCls = 'checking';
-            let label = 'Verificando...';
-            if (status) {
+            let stateCls = '';
+            let label = '--';
+            if (status !== undefined && status !== null) {
                 const ok = status.toUpperCase() !== 'NO';
                 cls = ok ? 'module-ok' : 'module-fail';
                 stateCls = ok ? 'operational' : 'faulty';
