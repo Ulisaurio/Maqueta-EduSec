@@ -149,11 +149,11 @@ void loop() {
 
   if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
-    Serial.println(F("Puerta abierta"));
+    Serial.println(F("Acceso principal abierto"));
   }
   else if (strcmp(cmd, "cerrar") == 0) {
     digitalWrite(RELAY_PIN, HIGH);
-    Serial.println(F("Puerta cerrada"));
+    Serial.println(F("Acceso principal cerrado"));
   }
   else if (strncmp(cmd, "enrolar ", 8) == 0) {
     int id = atoi(cmd + 8);
