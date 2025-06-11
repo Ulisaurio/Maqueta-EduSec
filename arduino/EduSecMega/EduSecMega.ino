@@ -211,11 +211,11 @@ void loop() {
   }
   else if (cmd.startsWith("rgb ")) {
     String c = cmd.substring(4);
-    if (c == "red")      setRGB(255,0,0);
-    else if (c == "green") setRGB(0,255,0);
-    else if (c == "blue")  setRGB(0,0,255);
-    else if (c == "off")   rgbOff();
-    Serial.println("RGB listo");
+    if (c == "red")      { setRGB(255,0,0); Serial.println("RGB listo"); }
+    else if (c == "green") { setRGB(0,255,0); Serial.println("RGB listo"); }
+    else if (c == "blue")  { setRGB(0,0,255); Serial.println("RGB listo"); }
+    else if (c == "off")   { rgbOff(); Serial.println("RGB listo"); }
+    else Serial.println(F("rgb inválido"));
   }
   else if (cmd == "leertemp") {
     sensors.requestTemperatures();
