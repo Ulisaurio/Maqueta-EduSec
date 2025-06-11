@@ -1,69 +1,85 @@
-﻿// util/sendSerial.mjs
-import SerialPort from 'serialport';
-import ReadlineParser from '@serialport/parser-readline';
+// util/sendSerial.mjs
+import { SerialPort } from 'serialport';
+import { ReadlineParser } from '@serialport/parser-readline';
 
 let port;
 let parser;
+let arduinoAvailable = false;
+
+/**
+ * Detect if the configured serial port exists.
+ */
+export async function checkArduino() {
+    const path = process.env.SERIAL_PORT || 'COM5';
+    try {
+        const ports = await SerialPort.list();
+        arduinoAvailable = ports.some(p => p.path === path);
+    } catch (err) {
+        arduinoAvailable = false;
+        console.error('Error listando puertos serial:', err.message);
+    }
+}
+
+export function isArduinoAvailable() {
+    return arduinoAvailable;
+}
+
+await checkArduino();
 
 /**
  * Inicializa el puerto serie (si no está inicializado) y retorna una promesa
  * que resuelve con la respuesta del Arduino.
+ * Si el puerto no está disponible, devuelve un mensaje de advertencia.
  * @param {string} comando Texto que se envía (por ejemplo: "abrir")
  * @returns {Promise<string>} Respuesta del Arduino como string
  */
 export default async function sendSerial(comando) {
-    return new Promise((resolve, reject) => {
-        // Si aún no se ha abierto el puerto, lo abrimos
+    const path = process.env.SERIAL_PORT || 'COM5';
+    if (!arduinoAvailable) {
+        await checkArduino();
+        if (!arduinoAvailable) {
+            return `Arduino no disponible (${path})`;
+        }
+    }
+    return new Promise((resolve) => {
+        // Inicializar puerto y parser si es necesario
         if (!port) {
-            // Puerto serie, configurable via la variable de entorno SERIAL_PORT
-            // (por defecto 'COM5')
-            const path = process.env.SERIAL_PORT || 'COM5';
-            port = new SerialPort(path, {
-                baudRate: 9600,
-                autoOpen: false
-            });
-
-            // Parser para leer líneas separadas por \n
+            port = new SerialPort(path, { baudRate: 9600, autoOpen: false });
             parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
-
             port.on('error', err => {
                 console.error('Error en el puerto serial:', err.message);
             });
         }
 
-        // Si el puerto no está abierto, lo abrimos
+        const writeCmd = () => {
+            port.write(comando + '\n', err => {
+                if (err) {
+                    arduinoAvailable = false;
+                    return resolve(`Error enviando comando: ${err.message}`);
+                }
+            });
+        };
+
         if (!port.isOpen) {
             port.open(err => {
                 if (err) {
-                    return reject(`Error abriendo puerto: ${err.message}`);
+                    arduinoAvailable = false;
+                    return resolve(`Error abriendo puerto: ${err.message}`);
                 }
-                // Una vez abierto, enviamos el comando
-                port.write(comando + '\n', err => {
-                    if (err) {
-                        return reject(`Error enviando comando: ${err.message}`);
-                    }
-                });
+                writeCmd();
             });
         } else {
-            // Ya está abierto, simplemente enviamos
-            port.write(comando + '\n', err => {
-                if (err) {
-                    return reject(`Error enviando comando: ${err.message}`);
-                }
-            });
+            writeCmd();
         }
 
-        // Esperamos la primera línea de respuesta del Arduino
         const onData = data => {
-            // “data” es la línea completa (sin \r\n)
             resolve(data);
             parser.removeListener('data', onData);
         };
 
-        // En caso de timeout (por si Arduino no responde en 2 segundos)
         const timeoutId = setTimeout(() => {
             parser.removeListener('data', onData);
-            reject('Timeout: sin respuesta del Arduino.');
+            resolve('Timeout: sin respuesta del Arduino.');
         }, 2000);
 
         parser.once('data', data => {

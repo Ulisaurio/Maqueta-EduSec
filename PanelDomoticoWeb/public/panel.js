@@ -50,7 +50,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Sparklines (ejemplo estático)
         function sparklineHTML() {
-            return `<canvas id="sparklineChart" class="sparkline"></canvas>`;
+            return `
+            <div class="relative h-full">
+              <canvas id="sparklineChart" class="sparkline hidden"></canvas>
+              <div id="noHistoryMsg" class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 bg-slate-50/70 dark:bg-slate-700/30">
+                <i data-feather="bar-chart-2" class="w-4 h-4"></i>
+                <span class="text-sm">Historial no disponible…</span>
+              </div>
+            </div>`;
+        }
+
+        function updateHistoryDisplay() {
+            const canvas = document.getElementById('sparklineChart');
+            const msg = document.getElementById('noHistoryMsg');
+            if (!canvas || !msg) return;
+            if (tempHistory.length === 0) {
+                canvas.classList.add('hidden');
+                msg.classList.remove('hidden');
+            } else {
+                canvas.classList.remove('hidden');
+                msg.classList.add('hidden');
+            }
         }
 
         function renderSparkline() {
@@ -89,9 +109,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                         }
                     },
-                    interaction: { mode: 'nearest', intersect: false }
-                }
-            });
+                interaction: { mode: 'nearest', intersect: false }
+            }
+        });
+            updateHistoryDisplay();
             refreshTemp();
         }
 
@@ -305,12 +326,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const applyBtnStyle = () => {};
 
-        const toast = msg => {
+        const toast = (msg, duration = 3000) => {
             const t = document.createElement('div');
-            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow';
-            t.textContent = msg;
+            t.className = 'bg-slate-800 text-white px-4 py-2 rounded shadow flex items-center gap-2';
+            const span = document.createElement('span');
+            span.textContent = msg;
+            const btn = document.createElement('button');
+            btn.innerHTML = '<i data-feather="x"></i>';
+            btn.onclick = () => t.remove();
+            t.appendChild(span);
+            t.appendChild(btn);
             toastContainer.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
+            feather.replace();
+            if (duration !== null) setTimeout(() => t.remove(), duration);
         };
 
         function clockTick() {
@@ -355,16 +383,32 @@ const applyBtnStyle = () => {};
             const el = document.getElementById('mainsStatus');
             if (el) el.textContent = v === null ? '--' : v;
         }
+        function modulesSummary() {
+            const cards = document.querySelectorAll('.module-grid .module-card');
+            const allOk = Array.from(cards).every(c => c.classList.contains('module-ok'));
+            return allOk ? 'Todos los módulos OK' : 'Módulos con fallos';
+        }
+        function updateModulesSummary() {
+            const el = document.getElementById('modulesSummary');
+            if (el) el.textContent = modulesSummary();
+        }
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
                 const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
-                if (m) updateTemp(parseFloat(m[1]));
-                else updateTemp(null);
+                if (m) {
+                    const val = parseFloat(m[1]);
+                    updateTemp(val);
+                    tempHistory.push(val);
+                    if (tempHistory.length > 12) tempHistory.shift();
+                } else {
+                    updateTemp(null);
+                }
             } catch (err) {
                 toast(err.message);
                 updateTemp(null);
             }
+            updateHistoryDisplay();
         }
         async function refreshVoltage() {
             try {
@@ -431,6 +475,7 @@ const applyBtnStyle = () => {};
                 toast(err.message);
                 updateTemp(null);
             }
+            updateHistoryDisplay();
         }
         async function refreshVoltage() {
             try {
@@ -536,6 +581,7 @@ const applyBtnStyle = () => {};
                     btn.disabled = false;
                     btn.textContent = 'Verificar';
                 }
+                updateModulesSummary();
             }
         }
 
@@ -575,6 +621,10 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    checkAllModules().then(updateModulesSummary);
+                    api('/status/arduino').then(s => {
+                        if (!s.available) toast('⚠️ Arduino no conectado', null);
+                    }).catch(() => {});
                 }, 600);
             } catch (err) {
                 loginError.textContent = err.message;

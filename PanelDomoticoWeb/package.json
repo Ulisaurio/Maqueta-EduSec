@@ -4,7 +4,7 @@
   "type": "module",
   "main": "app.mjs",
   "scripts": {
-    "start": "SERIAL_PORT=COM5 node app.mjs",
+    "start": "node app.mjs",
     "recover": "node util/recoverRoot.mjs"
   },
   "dependencies": {
