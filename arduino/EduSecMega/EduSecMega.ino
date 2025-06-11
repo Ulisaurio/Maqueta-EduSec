@@ -199,6 +199,16 @@ void loop() {
       Serial.println(F("Sin tarjeta"));
     }
   }
+  else if (strcmp(cmd, "listar_huellas") == 0) {
+    String listado = "";
+    for (uint16_t i = 1; i <= 200; i++) {
+      if (finger.loadModel(i) == FINGERPRINT_OK) {
+        if (listado.length() > 0) listado += ',';
+        listado += String(i);
+      }
+    }
+    Serial.println(listado);
+  }
   else if (strcmp(cmd, "voltaje") == 0) {
     float v = leerVoltaje();
     Serial.print(F("Voltaje: "));

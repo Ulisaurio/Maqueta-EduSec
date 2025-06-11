@@ -28,13 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const stateCls = ok ? 'operational' : 'faulty';
             const label = ok ? 'Operativo' : 'Fallo';
             return `
-            <div class="module-card ${cls} shadow">
+            <div class="module-card ${cls} shadow" data-module="${name}">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-2">
                   <i data-feather="cpu" class="module-icon"></i>
                   <h4 class="module-title">${name}</h4>
                 </div>
-                <span class="status ${stateCls}">${label}</span>
+                <span class="status ${stateCls}" data-status>${label}</span>
               </div>
               <button onclick="verifyModule('${name}', this)" class="verify-btn btn btn-sm mt-4 self-end">Verificar</button>
             </div>`;
@@ -124,11 +124,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Usuario</th><th class="px-3 py-2 text-left">Huella ID</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th></tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                  <tr><td class="px-3 py-1">1</td><td class="px-3 py-1">H-001</td><td class="px-3 py-1"><button class="text-red-500 hover:underline">Eliminar</button></td></tr>
-                </tbody>
+                <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
             </div>`;
         }
@@ -232,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Fuente principal del sistema">
                   <div class="flex items-center gap-2"><i data-feather="zap" class="text-xl"></i><h4 class="font-bold">Fuente de Alimentación</h4></div>
-                  <p class="text-sm"><span class="font-medium">AC 120V</span></p>
+                  <p class="text-sm"><span id="mainsStatus" class="font-medium">--</span></p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4" title="Nivel de voltaje del circuito">
                   <div class="flex items-center gap-2"><i data-feather="activity" class="text-xl"></i><h4 class="font-bold">Voltaje Actual</h4></div>
@@ -353,6 +351,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (bar) bar.style.width = v === null ? '0%' : `${Math.min(v,100)}%`;
             if (lvl) lvl.textContent = v === null ? '--' : `${v}V`;
         }
+        function updateConsumption(v) {
+            const el = document.getElementById('powerConsumption');
+            if (el) el.textContent = v === null ? '--' : `${v}A`;
+        }
+        function updateMains(v) {
+            const el = document.getElementById('mainsStatus');
+            if (el) el.textContent = v === null ? '--' : v;
+        }
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
@@ -374,16 +380,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     updateVoltage(null);
                 }
+                if (data.resultado) updateMains(data.resultado);
             } catch (err) {
                 toast(err.message);
                 updateVoltage(null);
+                updateMains(null);
+            }
+        }
+        async function refreshConsumption() {
+            try {
+                const data = await api('/comando/consumo');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    updateConsumption(parseFloat(m[1]));
+                } else {
+                    updateConsumption(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateConsumption(null);
             }
         }
         function startPolling() {
             refreshTemp();
             refreshVoltage();
+            refreshConsumption();
             setInterval(refreshTemp, 10000);
             setInterval(refreshVoltage, 15000);
+            setInterval(refreshConsumption, 15000);
         }
         async function refreshTemp() {
             try {
@@ -418,18 +442,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
                 if (m) {
                     const v = parseFloat(m[1]);
-                    const bar = document.getElementById('voltageBar');
-                    const lvl = document.getElementById('voltageLevel');
-                    if (bar) bar.style.width = `${Math.min(v,100)}%`;
-                    if (lvl) lvl.textContent = `${v}V`;
+                    updateVoltage(v);
+                } else {
+                    updateVoltage(null);
                 }
-            } catch (err) { toast(err.message); }
+                if (data.resultado) updateMains(data.resultado);
+            } catch (err) {
+                toast(err.message);
+                updateVoltage(null);
+                updateMains(null);
+            }
+        }
+        async function refreshConsumption() {
+            try {
+                const data = await api('/comando/consumo');
+                const m = /([-+]?\d+\.?\d*)/.exec(data.resultado || '');
+                if (m) {
+                    updateConsumption(parseFloat(m[1]));
+                } else {
+                    updateConsumption(null);
+                }
+            } catch (err) {
+                toast(err.message);
+                updateConsumption(null);
+            }
         }
         function startPolling() {
             refreshTemp();
             refreshVoltage();
+            refreshConsumption();
             setInterval(refreshTemp, 10000);
             setInterval(refreshVoltage, 15000);
+            setInterval(refreshConsumption, 15000);
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
@@ -449,6 +493,33 @@ document.addEventListener("DOMContentLoaded", () => {
             'Buzzer': 'alarm',
             'Display LCD': 'rgb_red'
         };
+
+        let moduleInterval;
+
+        function updateModuleCard(mod, ok) {
+            const card = document.querySelector(`.module-card[data-module="${mod}"]`);
+            if (!card) return;
+            const span = card.querySelector('[data-status]');
+            card.classList.toggle('module-ok', ok);
+            card.classList.toggle('module-fail', !ok);
+            if (span) {
+                span.classList.toggle('operational', ok);
+                span.classList.toggle('faulty', !ok);
+                span.textContent = ok ? 'Operativo' : 'Fallo';
+            }
+        }
+
+        async function checkAllModules() {
+            for (const mod in moduleActions) {
+                await verifyModule(mod);
+            }
+        }
+
+        function startModuleMonitoring() {
+            checkAllModules();
+            clearInterval(moduleInterval);
+            moduleInterval = setInterval(checkAllModules, 60000);
+        }
         async function verifyModule(mod, btn) {
             if (btn) {
                 btn.disabled = true;
@@ -459,8 +530,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!accion) throw new Error('No soportado');
                 const data = await api(`/comando/${accion}`);
                 toast(`Resultado de ${mod}: ${data.resultado}`);
+                const ok = /OK/i.test(data.resultado || '');
+                updateModuleCard(mod, ok);
             } catch (err) {
                 toast(err.message);
+                updateModuleCard(mod, false);
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -539,6 +613,26 @@ document.addEventListener("DOMContentLoaded", () => {
                   <td class="px-3 py-1">
                     <button class="delUser btn btn-sm btn-danger" data-id="${u.id}">Eliminar</button>
                   </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function loadHuellas() {
+            try {
+                const ids = await api('/huellas');
+                renderHuellas(ids);
+            } catch {
+                toast('Error cargando huellas');
+            }
+        }
+
+        function renderHuellas(list) {
+            const tbody = document.getElementById('fingerTBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            list.forEach(id => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="px-3 py-1">${id}</td>`;
                 tbody.appendChild(tr);
             });
         }
