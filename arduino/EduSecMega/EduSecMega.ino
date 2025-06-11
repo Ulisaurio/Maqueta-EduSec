@@ -209,13 +209,13 @@ void loop() {
     sonarAlarma();
     Serial.println("Alarma sonó");
   }
-  else if (strncmp(cmd, "rgb ", 4) == 0) {
-    const char *c = cmd + 4;
-    if (strcmp(c, "red") == 0)      setRGB(255,0,0);
-    else if (strcmp(c, "green") == 0) setRGB(0,255,0);
-    else if (strcmp(c, "blue") == 0)  setRGB(0,0,255);
-    else if (strcmp(c, "off") == 0)   rgbOff();
-    Serial.println("RGB listo");
+  else if (cmd.startsWith("rgb ")) {
+    String c = cmd.substring(4);
+    if (c == "red")      { setRGB(255,0,0); Serial.println("RGB listo"); }
+    else if (c == "green") { setRGB(0,255,0); Serial.println("RGB listo"); }
+    else if (c == "blue")  { setRGB(0,0,255); Serial.println("RGB listo"); }
+    else if (c == "off")   { rgbOff(); Serial.println("RGB listo"); }
+    else Serial.println(F("rgb inválido"));
   }
   else if (strcmp(cmd, "leertemp") == 0) {
     sensors.requestTemperatures();
