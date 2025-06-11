@@ -105,17 +105,14 @@ document.addEventListener("DOMContentLoaded", () => {
         function renderSparkline() {
             const ctx = document.getElementById('sparklineChart').getContext('2d');
             if (tempChart) tempChart.destroy();
-            const now = new Date();
-            const labels = tempHistory.map((_, i) => {
-                const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            });
+            const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const data = tempHistory.map(h => h.value);
             tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
                     datasets: [{
-                        data: tempHistory,
+                        data,
                         borderColor: '#1683d8',
                         borderWidth: 2,
                         pointRadius: 4,
@@ -538,16 +535,13 @@ const applyBtnStyle = () => {};
                 const val = parseNumber(data.resultado);
                 if (val !== null) {
                     updateTemp(val);
-                    tempHistory.push(val);
+                    tempHistory.push({ value: val, time: Date.now() });
                     if (tempHistory.length > 12) tempHistory.shift();
                     if (tempChart) {
-                        const now = new Date();
-                        const labels = tempHistory.map((_, i) => {
-                            const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
-                            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        });
+                        const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                        const data = tempHistory.map(h => h.value);
                         tempChart.data.labels = labels;
-                        tempChart.data.datasets[0].data = tempHistory;
+                        tempChart.data.datasets[0].data = data;
                         tempChart.update();
                     }
                     lastTempError = false;
@@ -829,6 +823,7 @@ const applyBtnStyle = () => {};
         // Variables globales
         let currentUser = null;
         let jwtToken = '';
+        // store objects { value, time }
         let tempHistory = [];
         let tempChart = null;
         let lastTempError = false;
