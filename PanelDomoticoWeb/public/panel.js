@@ -892,7 +892,7 @@ const applyBtnStyle = () => {};
         }
         const moduleActions = {
             'Arduino': 'arduino_status',
-            'PIR Sensor': 'pir',
+            'PIR Sensor': 'pir_status',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
             'Buzzer': 'buzzer_status',
