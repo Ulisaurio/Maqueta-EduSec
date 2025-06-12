@@ -39,9 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
         // Generadores de tarjetas
-        function card(icon, title, value, cls = "") {
+        function card(icon, title, value, cls = "", extra = "") {
             return `
-            <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-2 ${cls}">
+            <div ${extra} class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-2 ${cls}">
               <div class="flex items-center gap-2"><i data-feather="${icon}"></i><h4 class="font-bold">${title}</h4></div>
               <p class="text-sm">${value}</p>
             </div>`;
@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                ${card('shield', 'Seguridad del Sistema', '<span class="font-medium">Todos los módulos OK</span>', 'bg-success-soft text-success')}
+                ${card('shield', 'Salud del Sistema', '<span id="modulesSummary" class="font-medium">--</span>', 'cursor-pointer bg-success-soft text-success', 'id="systemHealthCard"')}
                 ${card('lock', 'Acceso principal', `<span id="homeDoorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
                 ${sensorCard('thermometer', 'Temperatura', '<span id="tempValue">--</span>', 'bg-blue-100 text-blue-700')}
               </div>
@@ -476,7 +476,17 @@ document.addEventListener("DOMContentLoaded", () => {
             applyBtnStyle();
             content.classList.add('fade-in');
             setTimeout(() => content.classList.remove('fade-in'), 400);
-            if (id === 'home') renderSparkline();
+            if (id === 'home') {
+                renderSparkline();
+                updateModulesSummary();
+                const card = document.getElementById('systemHealthCard');
+                if (card) {
+                    card.onclick = () => {
+                        const b = document.querySelector('#menu button[data-sec="estatus"]');
+                        if (b) loadSection(b, 'estatus');
+                    };
+                }
+            }
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
@@ -551,13 +561,29 @@ const applyBtnStyle = () => {};
             if (t2) t2.textContent = txt;
         }
         function modulesSummary() {
-            const cards = document.querySelectorAll('.module-grid .module-card');
-            const allOk = Array.from(cards).every(c => c.classList.contains('module-ok'));
-            return allOk ? 'Todos los módulos OK' : 'Módulos con fallos';
+            const vals = Object.values(moduleStatus);
+            if (!vals.length) return '--';
+            if (vals.some(v => v === null)) return 'Verificando...';
+            const fails = vals.filter(v => v === false).length;
+            if (fails === 0) return 'Todos los módulos OK';
+            return fails === 1 ? '1 módulo con fallos' : `${fails} módulos con fallos`;
         }
         function updateModulesSummary() {
             const el = document.getElementById('modulesSummary');
-            if (el) el.textContent = modulesSummary();
+            const card = document.getElementById('systemHealthCard');
+            if (!el || !card) return;
+            const vals = Object.values(moduleStatus);
+            const fails = vals.filter(v => v === false).length;
+            el.textContent = modulesSummary();
+            const verifying = vals.some(v => v === null);
+            if (verifying) {
+                card.classList.remove('bg-success-soft', 'text-success', 'bg-red-100', 'text-red-700');
+            } else {
+                card.classList.toggle('bg-success-soft', fails === 0);
+                card.classList.toggle('text-success', fails === 0);
+                card.classList.toggle('bg-red-100', fails > 0);
+                card.classList.toggle('text-red-700', fails > 0);
+            }
         }
         function parseNumber(str) {
             if (!str || /(no disponible|error|timeout|sin respuesta)/i.test(str)) {
@@ -849,10 +875,13 @@ const applyBtnStyle = () => {};
                     span.classList.add('checking');
                     span.textContent = 'Verificando...';
                 }
+                const mod = card.dataset.module;
+                if (mod) moduleStatus[mod] = null;
             });
         }
 
         function updateModuleCard(mod, ok) {
+            moduleStatus[mod] = ok;
             const card = document.querySelector(`.module-card[data-module="${mod}"]`);
             if (!card) return;
             const span = card.querySelector('[data-status]');
@@ -874,6 +903,8 @@ const applyBtnStyle = () => {};
 
       function startModuleMonitoring() {
            clearInterval(moduleInterval);
+           setCheckingStatuses();
+           updateModulesSummary();
            checkAllModules();
            moduleInterval = setInterval(checkAllModules, 60000);
        }
@@ -1046,6 +1077,7 @@ const applyBtnStyle = () => {};
             const accion = moduleActions[mod];
             try {
                 if (!accion) throw new Error('No soportado');
+                moduleStatus[mod] = null;
                 const card = document.querySelector(`.module-card[data-module="${mod}"]`);
                 const span = card ? card.querySelector('[data-status]') : null;
                 if (span && showChecking) {
@@ -1082,6 +1114,7 @@ const applyBtnStyle = () => {};
         // Variables globales
         let currentUser = null;
         let jwtToken = '';
+        const moduleStatus = {};
         // store objects { value, time }
         let tempHistory = [];
         let tempChart = null;
