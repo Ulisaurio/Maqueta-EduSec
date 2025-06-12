@@ -426,7 +426,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ["acceso", "lock", "Acceso principal"],
             ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
-            ["monitoreo", "eye", "Monitoreo"],
             ["config", "settings", "Configuración"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
