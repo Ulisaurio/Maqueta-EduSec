@@ -2,6 +2,7 @@
 
 This sketch merges the features of the original A1 and A2 prototypes so that a
 single Arduino Mega can handle all commands from the Node.js panel.
+The latest revision of this firmware is `EduSecMega_R2.ino`.
 
 ## Pin Mapping
 

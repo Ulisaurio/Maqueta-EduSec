@@ -4,6 +4,7 @@ This folder contains the firmware used by the EduSec project. Each
 subdirectory holds an Arduino sketch. The `original` directory stores the
 sketches that were tested individually on separate boards, while the
 `EduSecMega` sketch combines all features for a single Arduino Mega.
+Two versions exist in `EduSecMega`: `EduSecMega.ino` and `EduSecMega_R2.ino`. Upload `EduSecMega_R2.ino` to the Arduino as it is the latest revision.
 
 To build and upload a sketch using the Arduino IDE:
 
