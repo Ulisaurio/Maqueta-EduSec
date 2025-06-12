@@ -3,20 +3,33 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
 
 // Resolver __dirname en ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+export const DB_PATH = path.join(__dirname, 'edusec.db');
 
 // Función para abrir la conexión
 export async function openDb() {
     return open({
-        filename: path.join(__dirname, 'edusec.db'),
+        filename: DB_PATH,
         driver: sqlite3.Database
     });
 }
 
 let dbInstance;
+
+export async function closeDb() {
+    if (dbInstance) {
+        await dbInstance.close();
+        dbInstance = null;
+    }
+}
+
+export function setDbInstance(db) {
+    dbInstance = db;
+}
 
 // Devuelve una instancia singleton de la base de datos
 export async function getDb() {
@@ -61,8 +74,29 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
       huella_id TEXT NOT NULL,
+      nombre TEXT,
+      apellido_pat TEXT,
+      apellido_mat TEXT,
       creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+    )
+  `);
+
+    // Tabla de tarjetas RFID
+    await db.exec(`
+    CREATE TABLE IF NOT EXISTS rfid_cards (
+      uid TEXT PRIMARY KEY,
+      usuario_id INTEGER NOT NULL,
+      creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+    )
+  `);
+
+    // Tabla de ajustes generales
+    await db.exec(`
+    CREATE TABLE IF NOT EXISTS ajustes (
+      clave TEXT PRIMARY KEY,
+      valor TEXT
     )
   `);
 
@@ -91,4 +125,88 @@ export async function initDb() {
     }
 
     return db;
+}
+
+// ----- CRUD helpers for huellas -----
+
+export async function addHuella({ usuario_id, huella_id, nombre, apellido_pat, apellido_mat }) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)`,
+        [usuario_id, huella_id, nombre, apellido_pat, apellido_mat]
+    );
+}
+
+export async function getHuellas() {
+    const db = await getDb();
+    return db.all(`
+        SELECT h.id, h.usuario_id, h.huella_id, h.nombre, h.apellido_pat, h.apellido_mat, h.creado, u.username
+          FROM huellas h
+          JOIN usuarios u ON h.usuario_id = u.id
+      ORDER BY h.huella_id
+    `);
+}
+
+export async function getHuellaById(id) {
+    const db = await getDb();
+    return db.get(`SELECT * FROM huellas WHERE id = ?`, [id]);
+}
+
+export async function updateHuella(id, { usuario_id, huella_id }) {
+    const updates = [];
+    const params = [];
+    if (typeof usuario_id !== 'undefined') {
+        updates.push('usuario_id = ?');
+        params.push(usuario_id);
+    }
+    if (typeof huella_id !== 'undefined') {
+        updates.push('huella_id = ?');
+        params.push(huella_id);
+    }
+    if (!updates.length) return;
+    params.push(id);
+    const db = await getDb();
+    return db.run(`UPDATE huellas SET ${updates.join(', ')} WHERE id = ?`, params);
+}
+
+export async function deleteHuella(huellaId) {
+    const db = await getDb();
+    return db.run('DELETE FROM huellas WHERE huella_id = ?', [huellaId]);
+}
+
+// ----- CRUD helpers for RFID cards -----
+
+export async function addRfidCard({ uid, usuario_id }) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO rfid_cards (uid, usuario_id) VALUES (?, ?)`,
+        [uid, usuario_id]
+    );
+}
+
+export async function getRfidCards() {
+    const db = await getDb();
+    return db.all(`SELECT * FROM rfid_cards`);
+}
+
+export async function deleteRfidCard(uid) {
+    const db = await getDb();
+    return db.run('DELETE FROM rfid_cards WHERE uid = ?', [uid]);
+}
+
+// ----- Ajustes generales -----
+
+export async function getSetting(clave) {
+    const db = await getDb();
+    const row = await db.get('SELECT valor FROM ajustes WHERE clave = ?', [clave]);
+    return row ? row.valor : null;
+}
+
+export async function setSetting(clave, valor) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO ajustes (clave, valor) VALUES (?, ?)
+         ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+        [clave, valor]
+    );
 }

@@ -3,10 +3,32 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
+import os from 'os';
+import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { getDb, initDb } from './db.js';
-import { isArduinoAvailable } from './util/sendSerial.mjs';
+import { exec, spawn } from 'child_process';
+import {
+    getDb,
+    initDb,
+    closeDb,
+    setDbInstance,
+    openDb,
+    addHuella,
+    deleteHuella,
+    addRfidCard,
+    getRfidCards,
+    deleteRfidCard,
+    getSetting,
+    setSetting,
+    DB_PATH
+} from './db.js';
+import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
+import { readConfig, writeConfig } from './util/config.mjs';
+import enrolarCmd from './comandos/enrolar.mjs';
+import borrarCmd from './comandos/borrar.mjs';
+import rgbRedCmd from './comandos/rgb_red.mjs';
+import rgbGreenCmd from './comandos/rgb_green.mjs';
 
 // ———————— CONFIGURACIONES BÁSICAS ————————
 const __filename = fileURLToPath(import.meta.url);
@@ -19,11 +41,23 @@ const JWT_SECRET = 'cambio_esta_clave_por_una_aleatoria_y_segura';
 // ———————— MIDDLEWARES ————————
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+const upload = multer({ dest: os.tmpdir() });
 
 // ———————— INICIALIZAR BASE DE DATOS ————————
 let db;
 await initDb();      // Crea tablas y usuario admin si es necesario
 db = await getDb();  // Obtener instancia “promisificada” de la BD
+const cfg = await readConfig();
+let systemArmed = !!cfg.systemArmed;
+try {
+    if (systemArmed) {
+        await rgbRedCmd();
+    } else {
+        await rgbGreenCmd();
+    }
+} catch (err) {
+    console.error('Error inicializando LED RGB:', err);
+}
 
 // ———————— AUTENTICACIÓN JWT ————————
 function authenticateToken(req, res, next) {
@@ -165,12 +199,18 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
         return res.status(404).json({ msg: `Acción '${accion}' no encontrada` });
     }
     try {
-        const resultado = await fn();
+        const id = req.query.id ? parseInt(req.query.id, 10) : undefined;
+        const resultado = await fn(id);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle)
          VALUES (?, ?, ?)`,
             [req.user.id, accion, resultado.mensaje || JSON.stringify(resultado)]
         );
+        if (accion === 'enrolar' && typeof id !== 'undefined') {
+            await addHuella({ usuario_id: req.user.id, huella_id: id });
+        } else if (accion === 'borrar' && typeof id !== 'undefined') {
+            await deleteHuella(id);
+        }
         return res.json({ accion, resultado });
     } catch (err) {
         const mensaje = err && err.message ? err.message : 'Sin respuesta del Arduino';
@@ -184,25 +224,229 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
     }
 });
 
-// ———————— LISTAR HUELLAS ————————
+// ———————— GESTIÓN DE HUELLAS ————————
 app.get('/huellas', authenticateToken, async (req, res) => {
-    const fn = accionesMap['listar_huellas'];
-    if (!fn) {
-        return res.status(500).json({ msg: 'Comando no soportado' });
-    }
     try {
-        const resp = await fn();
-        const list = resp ? resp.split(',').filter(Boolean).map(n => parseInt(n)) : [];
-        return res.json(list);
+        const rows = await db.all(
+            `SELECT h.huella_id, h.usuario_id, h.nombre, h.apellido_pat, h.apellido_mat, u.username
+               FROM huellas h
+               JOIN usuarios u ON h.usuario_id = u.id
+           ORDER BY h.huella_id`
+        );
+        res.json(rows);
     } catch (err) {
-        console.error('Error en /huellas:', err);
+        console.error('Error en GET /huellas:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.post('/huellas', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { usuario_id, nombre, apellido_pat, apellido_mat } = req.body;
+    if (!usuario_id || !nombre || !apellido_pat || !apellido_mat) {
+        return res.status(400).json({ msg: 'usuario_id, nombre, apellido_pat y apellido_mat requeridos' });
+    }
+    const fn = accionesMap['enrolar'];
+    if (!fn) return res.status(500).json({ msg: 'Comando no soportado' });
+    try {
+        const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
+        const nextId = (row && row.max ? row.max : 0) + 1;
+        const resp = await sendSerialStream(`enrolar ${nextId}`);
+        const ok = /enrolada/i.test(resp);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, ok ? 'enrolar' : 'enrolar_error', resp]
+        );
+        if (!ok) {
+            return res.status(500).json({ msg: resp });
+        }
+        await db.run('INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)', [usuario_id, nextId, nombre, apellido_pat, apellido_mat]);
+        res.json({ huella_id: nextId, usuario_id, nombre, apellido_pat, apellido_mat });
+    } catch (err) {
+        console.error('Error en POST /huellas:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+// --------- Administrar huellas ---------
+
+app.delete('/huellas/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resp = await sendSerial(`borrar ${id}`);
+        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
+        );
+        return res.json({ msg: resp });
+    } catch (err) {
+        console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// --------- Gestión de tarjetas RFID ---------
+app.get('/rfid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        const rows = await getRfidCards();
+        res.json(rows);
+    } catch (err) {
+        console.error('Error en GET /rfid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.post('/rfid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { uid, usuario_id } = req.body;
+    if (!uid || !usuario_id) {
+        return res.status(400).json({ msg: 'uid y usuario_id requeridos' });
+    }
+    try {
+        await addRfidCard({ uid, usuario_id });
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'rfid_add', uid]
+        );
+        res.json({ uid, usuario_id });
+    } catch (err) {
+        console.error('Error en POST /rfid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.delete('/rfid/:uid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const { uid } = req.params;
+    try {
+        await deleteRfidCard(uid);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'rfid_del', uid]
+        );
+        res.json({ msg: 'Tarjeta eliminada' });
+    } catch (err) {
+        console.error('Error en DELETE /rfid/:uid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.get('/rfid/validate/:uid', authenticateToken, async (req, res) => {
+    const { uid } = req.params;
+    try {
+        const row = await db.get('SELECT 1 FROM rfid_cards WHERE uid = ?', [uid]);
+        res.json({ valid: !!row });
+    } catch (err) {
+        console.error('Error en GET /rfid/validate/:uid:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Estado armado del sistema ---------
+app.get('/system-state', authenticateToken, (req, res) => {
+    res.json({ armed: systemArmed });
+});
+
+app.post('/system-state', authenticateToken, async (req, res) => {
+    const { armed } = req.body;
+    if (typeof armed !== 'boolean') {
+        return res.status(400).json({ msg: 'armed requerido' });
+    }
+    if (armed !== systemArmed) {
+        systemArmed = armed;
+        await writeConfig({ systemArmed });
+        try {
+            if (systemArmed) {
+                await rgbRedCmd();
+            } else {
+                await rgbGreenCmd();
+            }
+        } catch (err) {
+            console.error('Error cambiando LED RGB:', err);
+        }
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [req.user.id, 'system_state', systemArmed ? 'armed' : 'disarmed']
+        );
+    }
+    res.json({ armed: systemArmed });
 });
 
 // ———————— ESTADO DEL ARDUINO ————————
 app.get('/status/arduino', (req, res) => {
     res.json({ available: isArduinoAvailable() });
+});
+
+// ———————— EVENTOS SERIAL (SSE) ————————
+app.get('/serial-events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const onMsg = msg => {
+        res.write(`data: ${msg}\n\n`);
+    };
+    serialEmitter.on('message', onMsg);
+    req.on('close', () => {
+        serialEmitter.off('message', onMsg);
+    });
+});
+
+// --------- Ajustes del sistema ---------
+
+app.get('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        const rows = await db.all('SELECT clave, valor FROM ajustes');
+        const obj = {};
+        for (const r of rows) obj[r.clave] = r.valor;
+        res.json(obj);
+    } catch (err) {
+        console.error('Error en GET /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.patch('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const updates = req.body || {};
+    if (typeof updates !== 'object') {
+        return res.status(400).json({ msg: 'Datos inválidos' });
+    }
+    try {
+        for (const [k, v] of Object.entries(updates)) {
+            await setSetting(k, String(v));
+        }
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en PATCH /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.get('/settings/serial-port', async (req, res) => {
+    const cfg = await readConfig();
+    res.json({ serialPort: cfg.serialPort });
+});
+
+app.post('/settings/serial-port', async (req, res) => {
+    const { serialPort } = req.body;
+    if (!serialPort) return res.status(400).json({ msg: 'serialPort requerido' });
+    await writeConfig({ serialPort });
+    res.json({ msg: 'ok' });
 });
 
 // ———————— CRUD DE USUARIOS (/users) ————————
@@ -315,6 +559,99 @@ app.delete('/users/:id', authenticateToken, async (req, res) => {
         console.error('Error en DELETE /users/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// --------- Backup de la base de datos ---------
+app.post('/backup', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const tempPath = path.join(os.tmpdir(), `edusec_backup_${ts}.db`);
+    try {
+        await fs.copyFile(DB_PATH, tempPath);
+        res.download(tempPath, `edusec_backup_${ts}.db`, err => {
+            fs.unlink(tempPath).catch(() => {});
+            if (err) console.error('Error enviando backup:', err);
+        });
+    } catch (err) {
+        console.error('Error en POST /backup:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Restaurar base de datos ---------
+app.post('/restore', authenticateToken, upload.single('backup'), async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    if (!req.file) {
+        return res.status(400).json({ msg: 'Archivo requerido' });
+    }
+    try {
+        const buf = await fs.readFile(req.file.path);
+        if (buf.slice(0, 16).toString() !== 'SQLite format 3\0') {
+            await fs.unlink(req.file.path);
+            return res.status(400).json({ msg: 'Archivo inválido' });
+        }
+        await closeDb();
+        await fs.copyFile(req.file.path, DB_PATH);
+        await fs.unlink(req.file.path);
+        const newDb = await openDb();
+        setDbInstance(newDb);
+        db = newDb;
+        res.json({ msg: 'Restaurado' });
+    } catch (err) {
+        console.error('Error en POST /restore:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Limpiar cache ---------
+app.post('/clear-cache', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        await db.run('DELETE FROM logs');
+        await db.run('VACUUM');
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en POST /clear-cache:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Actualizar sistema ---------
+app.post('/system/update', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    exec('git pull', { cwd: path.join(__dirname, '..') }, (err, stdout, stderr) => {
+        if (err) {
+            console.error('Error en POST /system/update:', err);
+            return res.status(500).json({ msg: stderr || err.message });
+        }
+        res.json({ msg: stdout.trim() || 'Actualizado' });
+    });
+});
+
+// --------- Reiniciar módulos ---------
+app.post('/system/restart', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    res.json({ msg: 'Reiniciando...' });
+    setTimeout(() => {
+        const args = process.argv.slice(1);
+        const child = spawn(process.argv[0], args, {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'inherit'
+        });
+        child.unref();
+        process.exit(0);
+    }, 100);
 });
 
 // ———————— RUTA “Catch-all” para SPA ————————
