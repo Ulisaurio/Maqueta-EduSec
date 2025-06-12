@@ -279,16 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
-              ${currentUser && currentUser.role === 'root' ? `
-              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                <h4 class="font-bold">Tarjetas RFID</h4>
-                <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
-                <div id="rfidAdmin" class="hidden space-y-4">
-                  ${rfidTable()}
-                  <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
-                </div>
-              </div>
-              ` : ''}
+              
             </section>`;
             },
 
@@ -341,9 +332,22 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                  <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
+                  <div class="flex justify-between items-center">
+                    <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
+                    ${currentUser && currentUser.role === 'root' ? '<button onclick="exportSecurityCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>' : ''}
+                  </div>
                   <div id="securityLog"></div>
                 </div>
+                ${currentUser && currentUser.role === 'root' ? `
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Tarjetas RFID</h4>
+                  <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
+                  <div id="rfidAdmin" class="hidden space-y-4">
+                    ${rfidTable()}
+                    <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
+                  </div>
+                </div>
+                ` : ''}
               </div>
             </section>`,
 
@@ -660,6 +664,25 @@ const applyBtnStyle = () => {};
             } catch (err) {
                 toast(err.message);
             }
+        }
+
+        function exportSecurityCSV() {
+            if (!securityLogs.length) return;
+            const header = 'hora,evento\n';
+            const csv = header + securityLogs.map(l => {
+                const [h, ev] = l.split(' - ');
+                const e = (ev || '').replace(/"/g, '""');
+                return `"${h}","${e}"`;
+            }).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const aEl = document.createElement('a');
+            aEl.href = url;
+            aEl.download = 'security_log.csv';
+            document.body.appendChild(aEl);
+            aEl.click();
+            document.body.removeChild(aEl);
+            URL.revokeObjectURL(url);
         }
 
         function toggleRfidAdmin() {
@@ -1257,6 +1280,7 @@ const applyBtnStyle = () => {};
         window.toggleRfidAdmin = toggleRfidAdmin;
         window.updateAccessTable = updateAccessTable;
         window.exportAccessCSV = exportAccessCSV;
+        window.exportSecurityCSV = exportSecurityCSV;
         window.verifyModule = verifyModule;
         window.showEnrollModal = showEnrollModal;
         window.showRfidModal = showRfidModal;
