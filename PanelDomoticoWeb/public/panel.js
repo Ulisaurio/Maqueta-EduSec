@@ -371,11 +371,20 @@ document.addEventListener("DOMContentLoaded", () => {
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
-                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
                     <div class="flex flex-wrap items-center gap-2">
                       <label for="serialPort" class="flex-1">Puerto Serie:</label>
                       <input id="serialPort" type="text" class="input-field w-40" />
                     </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="notifEmail" class="flex-1">Email para Notificaciones:</label>
+                      <input id="notifEmail" type="email" class="input-field flex-1 sm:w-60" />
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="backupFreq" class="flex-1">Frecuencia Auto-Backup (días):</label>
+                      <input id="backupFreq" type="number" class="input-field w-24" />
+                    </div>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                 </div>
@@ -1127,6 +1136,10 @@ const applyBtnStyle = () => {};
                 }
                 if (!currentSettings.sensorInterval) currentSettings.sensorInterval = '3';
                 if (!currentSettings.sessionTimeout) currentSettings.sessionTimeout = '15';
+                if (typeof currentSettings.simulatedMode === 'undefined') currentSettings.simulatedMode = 'true';
+                if (!currentSettings.notifEmail) currentSettings.notifEmail = '';
+                if (!currentSettings.backupFreq) currentSettings.backupFreq = '';
+                simulatedMode = /^(true|1)$/.test(currentSettings.simulatedMode);
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -1176,6 +1189,12 @@ const applyBtnStyle = () => {};
             if (acc) acc.checked = /^(true|1)$/.test(currentSettings.notifAcc);
             if (sec) sec.checked = /^(true|1)$/.test(currentSettings.notifSec);
             if (sys) sys.checked = /^(true|1)$/.test(currentSettings.notifSys);
+            const email = document.getElementById('notifEmail');
+            if (email) email.value = currentSettings.notifEmail || '';
+            const bFreq = document.getElementById('backupFreq');
+            if (bFreq) bFreq.value = currentSettings.backupFreq || '';
+            const chkSim = document.getElementById('chkSimMode');
+            if (chkSim) chkSim.checked = /^(true|1)$/.test(currentSettings.simulatedMode);
             const sInt = document.getElementById('sensorInterval');
             if (sInt) sInt.value = currentSettings.sensorInterval || '';
             const sTo = document.getElementById('sessionTimeout');
@@ -1319,10 +1338,19 @@ const applyBtnStyle = () => {};
                     }
                 }
 
+                const emailVal = document.getElementById('notifEmail').value.trim();
+                if (emailVal && !/^\S+@\S+\.\S+$/.test(emailVal)) {
+                    toast('Correo inválido');
+                    return;
+                }
+
                 const prefs = {
                     notifAcc: document.getElementById('chkNotifAcc').checked,
                     notifSec: document.getElementById('chkNotifSec').checked,
-                    notifSys: document.getElementById('chkNotifSys').checked
+                    notifSys: document.getElementById('chkNotifSys').checked,
+                    notifEmail: emailVal,
+                    backupFreq: document.getElementById('backupFreq').value,
+                    simulatedMode: document.getElementById('chkSimMode').checked
                 };
                 try {
                     await api('/settings', {
@@ -1331,11 +1359,13 @@ const applyBtnStyle = () => {};
                         body: JSON.stringify(prefs)
                     });
                     Object.assign(currentSettings, prefs);
+                    simulatedMode = !!prefs.simulatedMode;
                 } catch (err) {
                     toast(err.message);
                     return;
                 }
                 toast('Preferencias guardadas');
+                document.querySelector('#menu button[data-sec="config"]')?.click();
             } else if (e.target.closest('#backupBtn')) {
                 try {
                     const res = await fetch('/backup', {
