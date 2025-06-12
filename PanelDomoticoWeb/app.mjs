@@ -7,6 +7,7 @@ import os from 'os';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { exec, spawn } from 'child_process';
 import {
     getDb,
     initDb,
@@ -619,6 +620,38 @@ app.post('/clear-cache', authenticateToken, async (req, res) => {
         console.error('Error en POST /clear-cache:', err);
         res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// --------- Actualizar sistema ---------
+app.post('/system/update', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    exec('git pull', { cwd: path.join(__dirname, '..') }, (err, stdout, stderr) => {
+        if (err) {
+            console.error('Error en POST /system/update:', err);
+            return res.status(500).json({ msg: stderr || err.message });
+        }
+        res.json({ msg: stdout.trim() || 'Actualizado' });
+    });
+});
+
+// --------- Reiniciar módulos ---------
+app.post('/system/restart', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    res.json({ msg: 'Reiniciando...' });
+    setTimeout(() => {
+        const args = process.argv.slice(1);
+        const child = spawn(process.argv[0], args, {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'inherit'
+        });
+        child.unref();
+        process.exit(0);
+    }, 100);
 });
 
 // ———————— RUTA “Catch-all” para SPA ————————

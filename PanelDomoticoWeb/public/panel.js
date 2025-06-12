@@ -1396,9 +1396,15 @@ const applyBtnStyle = () => {};
                     toast('Tiempo de espera actualizado');
                 } catch (err) { toast(err.message); }
             } else if (e.target.closest('#updateBtn')) {
-                toast('Buscando actualizaciones...');
+                try {
+                    const data = await api('/system/update', { method: 'POST' });
+                    toast(data.msg || 'Actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#restartModulesBtn')) {
-                toast('Reiniciando módulos...');
+                try {
+                    const data = await api('/system/restart', { method: 'POST' });
+                    toast(data.msg || 'Reiniciando...');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#addHuellaBtn')) {
                 showEnrollModal();
             } else if (e.target.closest('#addRfidBtn')) {
