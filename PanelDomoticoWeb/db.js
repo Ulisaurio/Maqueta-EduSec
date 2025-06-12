@@ -61,6 +61,9 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
       huella_id TEXT NOT NULL,
+      nombre TEXT,
+      apellido_pat TEXT,
+      apellido_mat TEXT,
       creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
@@ -105,17 +108,22 @@ export async function initDb() {
 
 // ----- CRUD helpers for huellas -----
 
-export async function addHuella({ usuario_id, huella_id }) {
+export async function addHuella({ usuario_id, huella_id, nombre, apellido_pat, apellido_mat }) {
     const db = await getDb();
     return db.run(
-        `INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)`,
-        [usuario_id, huella_id]
+        `INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)`,
+        [usuario_id, huella_id, nombre, apellido_pat, apellido_mat]
     );
 }
 
 export async function getHuellas() {
     const db = await getDb();
-    return db.all(`SELECT * FROM huellas`);
+    return db.all(`
+        SELECT h.id, h.usuario_id, h.huella_id, h.nombre, h.apellido_pat, h.apellido_mat, h.creado, u.username
+          FROM huellas h
+          JOIN usuarios u ON h.usuario_id = u.id
+      ORDER BY h.huella_id
+    `);
 }
 
 export async function getHuellaById(id) {

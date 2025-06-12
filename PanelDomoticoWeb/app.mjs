@@ -218,7 +218,7 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
 app.get('/huellas', authenticateToken, async (req, res) => {
     try {
         const rows = await db.all(
-            `SELECT h.huella_id, h.usuario_id, u.username
+            `SELECT h.huella_id, h.usuario_id, h.nombre, h.apellido_pat, h.apellido_mat, u.username
                FROM huellas h
                JOIN usuarios u ON h.usuario_id = u.id
            ORDER BY h.huella_id`
@@ -234,8 +234,10 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     if (req.user.role !== 'root') {
         return res.status(403).json({ msg: 'Acceso denegado: solo root' });
     }
-    const { usuario_id } = req.body;
-    if (!usuario_id) return res.status(400).json({ msg: 'usuario_id requerido' });
+    const { usuario_id, nombre, apellido_pat, apellido_mat } = req.body;
+    if (!usuario_id || !nombre || !apellido_pat || !apellido_mat) {
+        return res.status(400).json({ msg: 'usuario_id, nombre, apellido_pat y apellido_mat requeridos' });
+    }
     const fn = accionesMap['enrolar'];
     if (!fn) return res.status(500).json({ msg: 'Comando no soportado' });
     try {
@@ -250,8 +252,8 @@ app.post('/huellas', authenticateToken, async (req, res) => {
         if (!ok) {
             return res.status(500).json({ msg: resp });
         }
-        await db.run('INSERT INTO huellas (usuario_id, huella_id) VALUES (?, ?)', [usuario_id, nextId]);
-        res.json({ huella_id: nextId, usuario_id });
+        await db.run('INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)', [usuario_id, nextId, nombre, apellido_pat, apellido_mat]);
+        res.json({ huella_id: nextId, usuario_id, nombre, apellido_pat, apellido_mat });
     } catch (err) {
         console.error('Error en POST /huellas:', err);
         res.status(500).json({ msg: 'Error interno' });
