@@ -35,6 +35,7 @@ await checkArduino();
 function createPort(portPath) {
     port = new SerialPort({ path: portPath, baudRate: 9600, autoOpen: false });
     parser = port.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+    parser.setMaxListeners(0);
     port.on('error', err => {
         console.error('Error en el puerto serial:', err.message);
     });
@@ -77,10 +78,19 @@ export default async function sendSerial(comando) {
             createPort(portPath);
         }
 
+        let timeoutId;
+        const onData = data => {
+            clearTimeout(timeoutId);
+            parser.off('data', onData);
+            resolve(data);
+        };
+
         const writeCmd = () => {
             port.write(comando + '\n', err => {
                 if (err) {
                     arduinoAvailable = false;
+                    parser.off('data', onData);
+                    clearTimeout(timeoutId);
                     return resolve(`Error enviando comando: ${err.message}`);
                 }
             });
@@ -90,6 +100,8 @@ export default async function sendSerial(comando) {
             port.open(err => {
                 if (err) {
                     arduinoAvailable = false;
+                    parser.off('data', onData);
+                    clearTimeout(timeoutId);
                     return resolve(`Error abriendo puerto: ${err.message}`);
                 }
                 writeCmd();
@@ -98,20 +110,12 @@ export default async function sendSerial(comando) {
             writeCmd();
         }
 
-        const onData = data => {
-            resolve(data);
-            parser.removeListener('data', onData);
-        };
-
-        const timeoutId = setTimeout(() => {
-            parser.removeListener('data', onData);
+        timeoutId = setTimeout(() => {
+            parser.off('data', onData);
             resolve('Timeout: sin respuesta del Arduino.');
         }, 2000);
 
-        parser.once('data', data => {
-            clearTimeout(timeoutId);
-            onData(data);
-        });
+        parser.once('data', onData);
     });
 }
 
@@ -150,7 +154,7 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
         };
         const cleanup = () => {
             clearTimeout(timer);
-            parser.removeListener('data', onData);
+            parser.off('data', onData);
         };
         const onData = data => {
             lastLine = data;
@@ -163,6 +167,7 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
             port.open(err => {
                 if (err) {
                     arduinoAvailable = false;
+                    cleanup();
                     return resolve(`Error abriendo puerto: ${err.message}`);
                 }
                 writeCmd();
