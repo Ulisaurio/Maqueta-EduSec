@@ -467,7 +467,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
             if (id === 'monitoreo') startSecurityMonitoring();
-            if (id === 'config') loadSerialPort();
+            if (id === 'config') {
+                loadSerialPort();
+                applySettingsUI();
+            }
         }
 
 
@@ -1062,6 +1065,7 @@ const applyBtnStyle = () => {};
         let lastDoorOpen = null;
         const securityLogs = [];
         let simulatedMode = true;
+        let currentSettings = {};
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
@@ -1085,6 +1089,11 @@ const applyBtnStyle = () => {};
                 jwtToken = data.token;
                 currentUser = { username: data.username, role: data.role };
                 lblUser.textContent = data.username;
+                if (data.role === 'root') {
+                    try {
+                        currentSettings = await api('/settings');
+                    } catch {}
+                }
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -1124,6 +1133,15 @@ const applyBtnStyle = () => {};
             } catch {
                 toast('Error cargando configuración');
             }
+        }
+
+        function applySettingsUI() {
+            const acc = document.getElementById('chkNotifAcc');
+            const sec = document.getElementById('chkNotifSec');
+            const sys = document.getElementById('chkNotifSys');
+            if (acc) acc.checked = /^(true|1)$/.test(currentSettings.notifAcc);
+            if (sec) sec.checked = /^(true|1)$/.test(currentSettings.notifSec);
+            if (sys) sys.checked = /^(true|1)$/.test(currentSettings.notifSys);
         }
 
         function renderUsers(list) {
@@ -1261,6 +1279,23 @@ const applyBtnStyle = () => {};
                         toast(err.message);
                         return;
                     }
+                }
+
+                const prefs = {
+                    notifAcc: document.getElementById('chkNotifAcc').checked,
+                    notifSec: document.getElementById('chkNotifSec').checked,
+                    notifSys: document.getElementById('chkNotifSys').checked
+                };
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(prefs)
+                    });
+                    Object.assign(currentSettings, prefs);
+                } catch (err) {
+                    toast(err.message);
+                    return;
                 }
                 toast('Preferencias guardadas');
             } else if (e.target.closest('#backupBtn')) {
