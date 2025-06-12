@@ -279,16 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
-              ${currentUser && currentUser.role === 'root' ? `
-              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                <h4 class="font-bold">Tarjetas RFID</h4>
-                <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
-                <div id="rfidAdmin" class="hidden space-y-4">
-                  ${rfidTable()}
-                  <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
-                </div>
-              </div>
-              ` : ''}
+              
             </section>`;
             },
 
@@ -347,6 +338,16 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                   <div id="securityLog"></div>
                 </div>
+                ${currentUser && currentUser.role === 'root' ? `
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Tarjetas RFID</h4>
+                  <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
+                  <div id="rfidAdmin" class="hidden space-y-4">
+                    ${rfidTable()}
+                    <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
+                  </div>
+                </div>
+                ` : ''}
               </div>
             </section>`,
 
