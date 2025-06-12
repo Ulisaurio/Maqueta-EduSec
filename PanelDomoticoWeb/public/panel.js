@@ -21,16 +21,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (arduinoAlertClose) {
         arduinoAlertClose.onclick = async () => {
             const s = await api('/status/arduino').catch(() => ({ available: false }));
-            updateArduinoAlert(s.available);
-            if (s.available) return;
-            showArduinoReminder();
+            arduinoConnected = !!s.available;
+            arduinoAlert.classList.add('hidden');
+            if (!s.available) showArduinoReminder();
         };
     }
 
     document.addEventListener('keydown', async e => {
         if (e.key === 'Escape' && !arduinoAlert.classList.contains('hidden')) {
             const s = await api('/status/arduino').catch(() => ({ available: false }));
-            updateArduinoAlert(s.available);
+            arduinoConnected = !!s.available;
+            arduinoAlert.classList.add('hidden');
             if (!s.available) showArduinoReminder();
         }
     });
