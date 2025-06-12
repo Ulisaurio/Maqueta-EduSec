@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const arduinoAlert = document.getElementById("arduinoAlert");
     const arduinoAlertClose = document.getElementById("arduinoAlertClose");
     let arduinoConnected = false;
+    const arduinoWarningToasts = [];
     const restoreInput = document.getElementById("restoreFileInput");
 
     if (arduinoAlertClose) {
@@ -43,7 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const showArduinoReminder = () => {
-        toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
+        const t = toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
+        if (t) arduinoWarningToasts.push(t);
     };
 
     const updateArduinoAlert = available => {
@@ -51,6 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (arduinoAlert) {
             if (available) {
                 arduinoAlert.classList.add('hidden');
+                while (arduinoWarningToasts.length) {
+                    const t = arduinoWarningToasts.pop();
+                    if (t && t.remove) t.remove();
+                }
             } else {
                 arduinoAlert.classList.remove('hidden');
                 feather.replace();
@@ -564,6 +570,7 @@ const applyBtnStyle = () => {};
                 t.addEventListener('mouseenter', () => clearTimeout(timer));
                 t.addEventListener('mouseleave', () => timer = setTimeout(() => t.remove(), duration));
             }
+            return t;
         };
 
         function clockTick() {
