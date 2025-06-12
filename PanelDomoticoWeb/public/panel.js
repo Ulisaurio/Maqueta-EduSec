@@ -274,7 +274,13 @@ document.addEventListener("DOMContentLoaded", () => {
             <section class="space-y-6">
               <h3 class="section-title border-b border-slate-200 dark:border-slate-700 pb-2"><i data-feather="lock"></i>Control del Acceso principal</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${card('lock', 'Estado', `<span id="doorState">--</span>`, 'bg-gray-100 dark:bg-gray-700')}
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                  <h4 class="font-bold">Estado</h4>
+                  <div class="flex items-center gap-2">
+                    <span id="doorStatusText" class="font-medium text-gray-500">--</span>
+                    <span id="doorIndicator" class="w-3 h-3 rounded-full bg-gray-400"></span>
+                  </div>
+                </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
                   <div class="flex justify-between items-center">
                     <h4 class="font-bold">Historial</h4>
@@ -576,6 +582,22 @@ const applyBtnStyle = () => {};
             document.querySelectorAll('#doorState, #homeDoorState').forEach(el => {
                 if (el) el.textContent = s;
             });
+            const txt = document.getElementById('doorStatusText');
+            const ind = document.getElementById('doorIndicator');
+            if (!txt || !ind) return;
+            if (/abierta/i.test(s)) {
+                txt.textContent = 'Puerta Abierta';
+                txt.className = 'font-medium text-red-500';
+                ind.className = 'w-3 h-3 rounded-full bg-red-500';
+            } else if (/cerrada/i.test(s)) {
+                txt.textContent = 'Puerta Cerrada';
+                txt.className = 'font-medium text-green-600';
+                ind.className = 'w-3 h-3 rounded-full bg-green-500';
+            } else {
+                txt.textContent = '--';
+                txt.className = 'font-medium text-gray-500';
+                ind.className = 'w-3 h-3 rounded-full bg-gray-400';
+            }
         }
         function updateTemp(v) {
             const txt = v === null ? '--' : `${v}°C`;
