@@ -3,20 +3,33 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
 
 // Resolver __dirname en ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+export const DB_PATH = path.join(__dirname, 'edusec.db');
 
 // Función para abrir la conexión
 export async function openDb() {
     return open({
-        filename: path.join(__dirname, 'edusec.db'),
+        filename: DB_PATH,
         driver: sqlite3.Database
     });
 }
 
 let dbInstance;
+
+export async function closeDb() {
+    if (dbInstance) {
+        await dbInstance.close();
+        dbInstance = null;
+    }
+}
+
+export function setDbInstance(db) {
+    dbInstance = db;
+}
 
 // Devuelve una instancia singleton de la base de datos
 export async function getDb() {

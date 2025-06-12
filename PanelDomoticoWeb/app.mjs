@@ -3,18 +3,24 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
+import os from 'os';
+import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import {
     getDb,
     initDb,
+    closeDb,
+    setDbInstance,
+    openDb,
     addHuella,
     deleteHuella,
     addRfidCard,
     getRfidCards,
     deleteRfidCard,
     getSetting,
-    setSetting
+    setSetting,
+    DB_PATH
 } from './db.js';
 import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
@@ -34,6 +40,7 @@ const JWT_SECRET = 'cambio_esta_clave_por_una_aleatoria_y_segura';
 // ———————— MIDDLEWARES ————————
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+const upload = multer({ dest: os.tmpdir() });
 
 // ———————— INICIALIZAR BASE DE DATOS ————————
 let db;
@@ -550,6 +557,67 @@ app.delete('/users/:id', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Error en DELETE /users/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Backup de la base de datos ---------
+app.post('/backup', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const tempPath = path.join(os.tmpdir(), `edusec_backup_${ts}.db`);
+    try {
+        await fs.copyFile(DB_PATH, tempPath);
+        res.download(tempPath, `edusec_backup_${ts}.db`, err => {
+            fs.unlink(tempPath).catch(() => {});
+            if (err) console.error('Error enviando backup:', err);
+        });
+    } catch (err) {
+        console.error('Error en POST /backup:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Restaurar base de datos ---------
+app.post('/restore', authenticateToken, upload.single('backup'), async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    if (!req.file) {
+        return res.status(400).json({ msg: 'Archivo requerido' });
+    }
+    try {
+        const buf = await fs.readFile(req.file.path);
+        if (buf.slice(0, 16).toString() !== 'SQLite format 3\0') {
+            await fs.unlink(req.file.path);
+            return res.status(400).json({ msg: 'Archivo inválido' });
+        }
+        await closeDb();
+        await fs.copyFile(req.file.path, DB_PATH);
+        await fs.unlink(req.file.path);
+        const newDb = await openDb();
+        setDbInstance(newDb);
+        db = newDb;
+        res.json({ msg: 'Restaurado' });
+    } catch (err) {
+        console.error('Error en POST /restore:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Limpiar cache ---------
+app.post('/clear-cache', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        await db.run('DELETE FROM logs');
+        await db.run('VACUUM');
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en POST /clear-cache:', err);
+        res.status(500).json({ msg: 'Error interno' });
     }
 });
 

@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const clockNow = document.getElementById("clockNow");
     const arduinoAlert = document.getElementById("arduinoAlert");
     const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+    const restoreInput = document.getElementById("restoreFileInput");
 
     if (arduinoAlertClose) {
         arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
@@ -1309,11 +1310,35 @@ const applyBtnStyle = () => {};
                 }
                 toast('Preferencias guardadas');
             } else if (e.target.closest('#backupBtn')) {
-                toast('Copia de seguridad creada');
+                try {
+                    const res = await fetch('/backup', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${jwtToken}` }
+                    });
+                    if (!res.ok) throw new Error('Error');
+                    const blob = await res.blob();
+                    const disp = res.headers.get('Content-Disposition') || '';
+                    const match = disp.match(/filename="([^\"]+)"/);
+                    const fname = match ? match[1] : 'backup.db';
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fname;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast('Copia de seguridad creada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#restoreBtn')) {
-                toast('Restaurando copia...');
+                restoreInput.click();
             } else if (e.target.closest('#clearCacheBtn')) {
-                toast('Caché limpiada');
+                try {
+                    await api('/clear-cache', { method: 'POST' });
+                    toast('Caché limpiada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#applySensorInterval')) {
                 toast('Intervalo aplicado');
             } else if (e.target.closest('#applySessionTimeout')) {
@@ -1335,6 +1360,21 @@ const applyBtnStyle = () => {};
             document.body.classList.toggle('sidebar-collapsed');
             feather.replace();
         };
+
+        if (restoreInput) {
+            restoreInput.onchange = async () => {
+                if (!restoreInput.files.length) return;
+                const fd = new FormData();
+                fd.append('backup', restoreInput.files[0]);
+                try {
+                    await api('/restore', { method: 'POST', body: fd });
+                    toast('Copia restaurada');
+                } catch (err) {
+                    toast(err.message);
+                }
+                restoreInput.value = '';
+            };
+        }
 
         // Cerrar menúAcciones si clic afuera
         document.addEventListener('click', e => {
