@@ -23,7 +23,7 @@ import {
     setSetting,
     DB_PATH
 } from './db.js';
-import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
+import sendSerial, { isArduinoAvailable, checkArduino, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
 import borrarCmd from './comandos/borrar.mjs';
@@ -382,7 +382,8 @@ app.post('/system-state', authenticateToken, async (req, res) => {
 });
 
 // ———————— ESTADO DEL ARDUINO ————————
-app.get('/status/arduino', (req, res) => {
+app.get('/status/arduino', async (req, res) => {
+    await checkArduino();
     res.json({ available: isArduinoAvailable() });
 });
 
