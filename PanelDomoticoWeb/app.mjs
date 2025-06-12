@@ -14,7 +14,7 @@ import {
     getRfidCards,
     deleteRfidCard
 } from './db.js';
-import sendSerial, { isArduinoAvailable } from './util/sendSerial.mjs';
+import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
 import enrolarCmd from './comandos/enrolar.mjs';
 import borrarCmd from './comandos/borrar.mjs';
@@ -241,7 +241,7 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     try {
         const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
         const nextId = (row && row.max ? row.max : 0) + 1;
-        const resp = await fn(nextId);
+        const resp = await sendSerialStream(`enrolar ${nextId}`);
         const ok = /enrolada/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
@@ -372,6 +372,21 @@ app.post('/system-state', authenticateToken, async (req, res) => {
 // ———————— ESTADO DEL ARDUINO ————————
 app.get('/status/arduino', (req, res) => {
     res.json({ available: isArduinoAvailable() });
+});
+
+// ———————— EVENTOS SERIAL (SSE) ————————
+app.get('/serial-events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    const onMsg = msg => {
+        res.write(`data: ${msg}\n\n`);
+    };
+    serialEmitter.on('message', onMsg);
+    req.on('close', () => {
+        serialEmitter.off('message', onMsg);
+    });
 });
 
 // --------- Ajustes del sistema ---------

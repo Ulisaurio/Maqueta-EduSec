@@ -622,16 +622,39 @@ const applyBtnStyle = () => {};
 
         async function enrollFinger(usuarioId) {
             if (!usuarioId) return;
+            const modal = document.createElement('div');
+            modal.id = 'fingerModal';
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72 text-center">
+                <h4 class="font-bold">Enrolando Huella</h4>
+                <p id="fingerMsg" class="text-sm">Iniciando...</p>
+              </div>`;
+            document.body.appendChild(modal);
+            feather.replace();
+            const evt = new EventSource('/serial-events');
+            evt.onmessage = e => {
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = e.data;
+            };
             try {
-                await api('/huellas', {
+                const resp = await api('/huellas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usuario_id: usuarioId })
                 });
                 loadHuellas();
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = resp.msg || 'Huella enrolada';
+                await delay(1500);
                 toast('Huella enrolada');
             } catch (err) {
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = err.message;
                 toast(err.message);
+            } finally {
+                evt.close();
+                setTimeout(() => modal.remove(), 1000);
             }
         }
         async function updateAccessTable(dateStr) {
