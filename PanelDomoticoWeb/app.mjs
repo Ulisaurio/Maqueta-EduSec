@@ -59,6 +59,31 @@ try {
     console.error('Error inicializando LED RGB:', err);
 }
 
+serialEmitter.on('message', async msg => {
+    const m = /^UID:\s*([A-F0-9:]+)/i.exec(msg);
+    if (!m) return;
+    const uid = m[1].toUpperCase();
+    try {
+        const row = await db.get('SELECT usuario_id FROM rfid_cards WHERE uid = ?', [uid]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [row ? row.usuario_id : null, 'rfid', uid]
+        );
+        if (row && systemArmed) {
+            systemArmed = false;
+            await writeConfig({ systemArmed });
+            try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
+            await db.run(
+                `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                [row.usuario_id, 'system_state', 'disarmed by rfid']
+            );
+            sendSerial('abrir').catch(() => {});
+        }
+    } catch (err) {
+        console.error('Error manejando UID:', err);
+    }
+});
+
 // ———————— AUTENTICACIÓN JWT ————————
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];

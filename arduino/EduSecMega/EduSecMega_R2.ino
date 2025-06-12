@@ -9,8 +9,9 @@ const uint8_t RELAY_PIN = 4;
 const uint8_t PIR_PIN = 2;
 const uint8_t TRIG_PIN = 8;
 const uint8_t ECHO_PIN = 5;
-const uint8_t SDA_PIN = 10;
-const uint8_t RST_PIN = 9;
+// MFRC522 wiring changed
+const uint8_t SDA_PIN = 30;
+const uint8_t RST_PIN = 31;
 const uint8_t BUZZER_PIN = 7;
 const uint8_t LED_R = 3;
 const uint8_t LED_G = 44;
@@ -130,17 +131,17 @@ bool verifyFinger(){
 }
 
 void loop(){
-  if(!readCommand()) return;
+  bool hasCmd = readCommand();
 
-  if(strcmp(cmd,"abrir")==0){
+  if(hasCmd && strcmp(cmd,"abrir")==0){
     digitalWrite(RELAY_PIN,LOW);
     Serial.println(F("Acceso principal abierto"));
   }
-  else if(strcmp(cmd,"cerrar")==0){
+  else if(hasCmd && strcmp(cmd,"cerrar")==0){
     digitalWrite(RELAY_PIN,HIGH);
     Serial.println(F("Acceso principal cerrado"));
   }
-  else if(strncmp(cmd,"enrolar ",8)==0){
+  else if(hasCmd && strncmp(cmd,"enrolar ",8)==0){
     if(!fingerPresent){ Serial.println(F("Sensor de huella no disponible")); }
     else{
       int id=atoi(cmd+8);
@@ -149,7 +150,7 @@ void loop(){
       else Serial.println(F("Error enrolando"));
     }
   }
-  else if(strncmp(cmd,"borrar ",7)==0){
+  else if(hasCmd && strncmp(cmd,"borrar ",7)==0){
     if(!fingerPresent){ Serial.println(F("Sensor de huella no disponible")); }
     else{
       int id=atoi(cmd+7);
@@ -157,12 +158,12 @@ void loop(){
       else Serial.println(F("Error borrando"));
     }
   }
-  else if(strcmp(cmd,"huella")==0){
+  else if(hasCmd && strcmp(cmd,"huella")==0){
     if(!fingerPresent) Serial.println(F("Sensor de huella no disponible"));
     else if(verifyFinger()) Serial.println(F("Huella válida"));
     else Serial.println(F("Huella no válida"));
   }
-  else if(strcmp(cmd,"distancia")==0){
+  else if(hasCmd && strcmp(cmd,"distancia")==0){
     long d = readDistance();
     if(d==0) Serial.println(F("Distancia: error"));
     else{
@@ -172,11 +173,11 @@ void loop(){
       Serial.println(F(" cm"));
     }
   }
-  else if(strcmp(cmd,"pir")==0){
+  else if(hasCmd && strcmp(cmd,"pir")==0){
     Serial.print(F("PIR: "));
     Serial.println(digitalRead(PIR_PIN));
   }
-  else if(strcmp(cmd,"pir_status")==0){
+  else if(hasCmd && strcmp(cmd,"pir_status")==0){
     pinMode(PIR_PIN, INPUT);
     int val = analogRead(PIR_PIN);
     if(val > 100 && val < 900){
@@ -187,7 +188,7 @@ void loop(){
       Serial.println(v);
     }
   }
-  else if(strcmp(cmd,"rfid")==0){
+  else if(hasCmd && strcmp(cmd,"rfid")==0){
     if(!rfidPresent){ Serial.println(F("RFID no disponible")); }
     else if(rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()){
       Serial.print(F("UID: "));
@@ -202,7 +203,7 @@ void loop(){
       Serial.println(F("Sin tarjeta"));
     }
   }
-  else if(strcmp(cmd,"listar_huellas")==0){
+  else if(hasCmd && strcmp(cmd,"listar_huellas")==0){
     String listado="";
     for(uint16_t i=1;i<=200;i++){
       if(finger.loadModel(i)==FINGERPRINT_OK){
@@ -212,14 +213,14 @@ void loop(){
     }
     Serial.println(listado);
   }
-  else if(strcmp(cmd,"buzzer_status")==0){
+  else if(hasCmd && strcmp(cmd,"buzzer_status")==0){
     Serial.println(F("Buzzer listo"));
   }
-  else if(strcmp(cmd,"alarm")==0){
+  else if(hasCmd && strcmp(cmd,"alarm")==0){
     alarm();
     Serial.println(F("Alarma sonó"));
   }
-  else if(strncmp(cmd,"rgb ",4)==0){
+  else if(hasCmd && strncmp(cmd,"rgb ",4)==0){
     const char *c = cmd+4;
     if(strcmp(c,"red")==0){ setRGB(255,0,0); Serial.println("RGB listo"); }
     else if(strcmp(c,"green")==0){ setRGB(0,255,0); Serial.println("RGB listo"); }
@@ -227,7 +228,7 @@ void loop(){
     else if(strcmp(c,"off")==0){ rgbOff(); Serial.println("RGB listo"); }
     else Serial.println(F("rgb inválido"));
   }
-  else if(strcmp(cmd,"leertemp")==0){
+  else if(hasCmd && strcmp(cmd,"leertemp")==0){
     sensors.requestTemperatures();
     float t = sensors.getTempCByIndex(0);
     if(t==DEVICE_DISCONNECTED_C) Serial.println(F("Error: DS18B20 no conectado"));
@@ -237,7 +238,22 @@ void loop(){
       Serial.println(F(" C"));
     }
   }
-  else{
+  else if(hasCmd){
     Serial.println(F("comando no reconocido"));
+  }
+
+  static unsigned long lastScan = 0;
+  if(rfidPresent && millis() - lastScan > 300){
+    lastScan = millis();
+    if(rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()){
+      Serial.print(F("UID: "));
+      for(byte i=0;i<rfid.uid.size;i++){
+        if(rfid.uid.uidByte[i]<0x10) Serial.print('0');
+        Serial.print(rfid.uid.uidByte[i], HEX);
+        if(i<rfid.uid.size-1) Serial.print(':');
+      }
+      Serial.println();
+      rfid.PICC_HaltA();
+    }
   }
 }
