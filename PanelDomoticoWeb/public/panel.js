@@ -132,13 +132,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+       function groupHistory(history, intervalMs) {
+            const buckets = {};
+            for (const h of history) {
+                const t = Math.floor(h.time / intervalMs) * intervalMs;
+                if (!buckets[t]) buckets[t] = { sum: 0, count: 0 };
+                buckets[t].sum += h.value;
+                buckets[t].count++;
+            }
+            return Object.entries(buckets).map(([time, b]) => ({
+                time: Number(time),
+                value: b.sum / b.count
+            })).sort((a, b) => a.time - b.time);
+        }
+
        function renderSparkline() {
             const cutoff = Date.now() - HISTORY_MS;
             tempHistory = tempHistory.filter(h => h.time >= cutoff);
+            const grouped = groupHistory(tempHistory, 10 * 60 * 1000);
             const ctx = document.getElementById('sparklineChart').getContext('2d');
             if (tempChart) tempChart.destroy();
-            const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-            const data = tempHistory.map(h => h.value);
+            const labels = grouped.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const data = grouped.map(h => h.value);
             tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -675,8 +690,9 @@ const applyBtnStyle = () => {};
                     tempHistory = tempHistory.filter(h => h.time >= cutoff);
                     localStorage.setItem('tempHistory', JSON.stringify(tempHistory));
                     if (tempChart) {
-                        const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-                        const data = tempHistory.map(h => h.value);
+                        const grouped = groupHistory(tempHistory, 10 * 60 * 1000);
+                        const labels = grouped.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                        const data = grouped.map(h => h.value);
                         tempChart.data.labels = labels;
                         tempChart.data.datasets[0].data = data;
                         tempChart.update();
