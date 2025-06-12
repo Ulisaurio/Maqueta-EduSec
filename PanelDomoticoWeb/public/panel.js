@@ -1019,7 +1019,9 @@ const applyBtnStyle = () => {};
             updateBuzzerUI(false);
             renderSecurityLog();
             checkSensors();
-            monitorInterval = setInterval(checkSensors, 3000);
+            const sInt = parseInt(currentSettings.sensorInterval, 10);
+            const delay = (isFinite(sInt) && sInt > 0 ? sInt : 3) * 1000;
+            monitorInterval = setInterval(checkSensors, delay);
         }
         async function verifyModule(mod, btn, showChecking = true, showToast = true) {
             if (btn) {
@@ -1071,12 +1073,30 @@ const applyBtnStyle = () => {};
         let lastTempError = false;
         let systemArmed = false;
         let monitorInterval = null;
+        let sessionTimer = null;
         let buzzerTimeout = null;
         let lastPir = null;
         let lastDoorOpen = null;
         const securityLogs = [];
         let simulatedMode = true;
         let currentSettings = {};
+
+        function resetSessionTimer() {
+            const mins = parseInt(currentSettings.sessionTimeout, 10);
+            if (!mins || mins <= 0) return;
+            clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                toast('Sesión finalizada por inactividad');
+                setTimeout(() => location.reload(), 500);
+            }, mins * 60 * 1000);
+        }
+
+        function initSessionTimeout() {
+            ['mousemove', 'keydown', 'click'].forEach(ev =>
+                document.addEventListener(ev, resetSessionTimer)
+            );
+            resetSessionTimer();
+        }
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
@@ -1105,6 +1125,8 @@ const applyBtnStyle = () => {};
                         currentSettings = await api('/settings');
                     } catch {}
                 }
+                if (!currentSettings.sensorInterval) currentSettings.sensorInterval = '3';
+                if (!currentSettings.sessionTimeout) currentSettings.sessionTimeout = '15';
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -1113,6 +1135,7 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
                         if (!s.available) {
@@ -1153,6 +1176,10 @@ const applyBtnStyle = () => {};
             if (acc) acc.checked = /^(true|1)$/.test(currentSettings.notifAcc);
             if (sec) sec.checked = /^(true|1)$/.test(currentSettings.notifSec);
             if (sys) sys.checked = /^(true|1)$/.test(currentSettings.notifSys);
+            const sInt = document.getElementById('sensorInterval');
+            if (sInt) sInt.value = currentSettings.sensorInterval || '';
+            const sTo = document.getElementById('sessionTimeout');
+            if (sTo) sTo.value = currentSettings.sessionTimeout || '';
         }
 
         function renderUsers(list) {
@@ -1340,9 +1367,34 @@ const applyBtnStyle = () => {};
                     toast(err.message);
                 }
             } else if (e.target.closest('#applySensorInterval')) {
-                toast('Intervalo aplicado');
+                const val = parseInt(document.getElementById('sensorInterval').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sensorInterval: val })
+                    });
+                    currentSettings.sensorInterval = String(val);
+                    if (monitorInterval) {
+                        clearInterval(monitorInterval);
+                        monitorInterval = setInterval(checkSensors, val * 1000);
+                    }
+                    toast('Intervalo aplicado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#applySessionTimeout')) {
-                toast('Tiempo de espera actualizado');
+                const val = parseInt(document.getElementById('sessionTimeout').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionTimeout: val })
+                    });
+                    currentSettings.sessionTimeout = String(val);
+                    resetSessionTimer();
+                    toast('Tiempo de espera actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#updateBtn')) {
                 toast('Buscando actualizaciones...');
             } else if (e.target.closest('#restartModulesBtn')) {
