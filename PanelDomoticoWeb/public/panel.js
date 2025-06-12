@@ -662,7 +662,9 @@ const applyBtnStyle = () => {};
         }
         function startPolling() {
             refreshTemp();
+            refreshDoorState();
             setInterval(refreshTemp, 10000);
+            setInterval(refreshDoorState, 10000);
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
