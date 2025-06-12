@@ -446,4 +446,38 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Static configuration blocks */
+.config-card {
+    background-color: var(--bg-card, #ffffff);
+    color: inherit;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.config-card-header {
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.config-card-body {
+    padding: 1rem;
+}
+
+.config-card.disabled {
+    background-color: #374151;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* grid layout for configuration blocks */
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.5rem;
+}
+
 
