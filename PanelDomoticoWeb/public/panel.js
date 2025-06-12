@@ -174,11 +174,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Tabla de huellas
         function fingerTable() {
+            const actionsHead = currentUser && currentUser.role === 'root'
+                ? '<th class="px-3 py-2 text-left">Acciones</th>' : '';
             return `
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Nombre Completo</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Nombre Completo</th>${actionsHead}</tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -187,11 +189,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Tabla de tarjetas RFID
         function rfidTable() {
+            const actionsHead = currentUser && currentUser.role === 'root'
+                ? '<th class="px-3 py-2 text-left">Acciones</th>' : '';
             return `
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">UID</th><th class="px-3 py-2 text-left">Usuario</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  <tr><th class="px-3 py-2 text-left">UID</th><th class="px-3 py-2 text-left">Usuario</th>${actionsHead}</tr>
                 </thead>
                 <tbody id="rfidTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -274,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button onclick="toggleFingerAdmin()" class="btn w-full">Administrar Huellas</button>
                 <div id="fingerAdmin" class="collapsible space-y-3">
                   ${fingerTable()}
-                  <button id="addHuellaBtn" class="btn w-full">Agregar Nueva Huella</button>
+                  ${currentUser && currentUser.role === 'root' ? `<div class="admin-footer"><button id="addHuellaBtn" class="btn-outline w-full">Agregar Nueva Huella</button></div>` : ''}
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
@@ -341,16 +345,14 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                   <div id="securityLog"></div>
                 </div>
-                ${currentUser && currentUser.role === 'root' ? `
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3 md:col-span-2">
                   <h4 class="font-bold">Tarjetas RFID</h4>
                   <button onclick="toggleRfidAdmin()" class="btn w-full">Administrar Tarjetas</button>
                   <div id="rfidAdmin" class="collapsible space-y-3">
                     ${rfidTable()}
-                    <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
+                    ${currentUser && currentUser.role === 'root' ? `<div class="admin-footer"><button id="addRfidBtn" class="btn-outline w-full">Agregar Nueva Tarjeta</button></div>` : ''}
                   </div>
                 </div>
-                ` : ''}
               </div>
             </section>`,
 
@@ -816,7 +818,11 @@ const applyBtnStyle = () => {};
             list.forEach(item => {
                 const tr = document.createElement('tr');
                 const user = userMap[item.usuario_id] || item.usuario_id;
-                tr.innerHTML = `<td class="px-3 py-1">${item.uid}</td><td class="px-3 py-1">${user}</td><td class="px-3 py-1"><button class="delRfid btn btn-sm btn-danger" data-uid="${item.uid}">Eliminar</button></td>`;
+                let cells = `<td class="px-3 py-1">${item.uid}</td><td class="px-3 py-1">${user}</td>`;
+                if (currentUser && currentUser.role === 'root') {
+                    cells += `<td class="px-3 py-1"><button class="delRfid btn btn-sm btn-danger" data-uid="${item.uid}">Eliminar</button></td>`;
+                }
+                tr.innerHTML = cells;
                 tbody.appendChild(tr);
             });
         }
@@ -1248,7 +1254,11 @@ const applyBtnStyle = () => {};
             list.forEach(item => {
                 const tr = document.createElement('tr');
                 const full = `${item.nombre || ''} ${item.apellido_pat || ''} ${item.apellido_mat || ''}`.trim();
-                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${full}</td><td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
+                let cells = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${full}</td>`;
+                if (currentUser && currentUser.role === 'root') {
+                    cells += `<td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
+                }
+                tr.innerHTML = cells;
                 tbody.appendChild(tr);
             });
         }

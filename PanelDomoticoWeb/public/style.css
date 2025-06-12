@@ -115,6 +115,21 @@ body {
     font-size: 0.875rem;
 }
 
+/* outline button variant */
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+.btn-outline:hover {
+    background-color: var(--primary-color);
+    color: var(--accent-text);
+    transform: translateY(-1px);
+}
+.btn-outline:active {
+    transform: scale(0.97);
+}
+
 .btn-danger {
     background-image: none;
     background-color: #dc2626;
@@ -444,6 +459,16 @@ body {
 }
 .collapsible.open {
     max-height: 999px;
+}
+
+/* spacing and divider for tables inside admin panels */
+.admin-footer {
+    border-top: 1px solid rgba(0,0,0,0.1);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+}
+.dark .admin-footer {
+    border-color: rgba(255,255,255,0.1);
 }
 
 .details-card > div {
