@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const panel = document.getElementById("panel");
     const loadingOverlay = document.getElementById("loadingOverlay");
     const toastContainer = document.getElementById("toastContainer");
+    const MAX_TOASTS = 3;
     const lblUser = document.getElementById("lblUser");
     const logoutBtn = document.getElementById("logoutBtn");
     const toggleSidebar = document.getElementById("toggleSidebar");
@@ -14,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const clockNow = document.getElementById("clockNow");
     const arduinoAlert = document.getElementById("arduinoAlert");
     const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+    const restoreInput = document.getElementById("restoreFileInput");
 
     if (arduinoAlertClose) {
         arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
@@ -104,17 +106,14 @@ document.addEventListener("DOMContentLoaded", () => {
         function renderSparkline() {
             const ctx = document.getElementById('sparklineChart').getContext('2d');
             if (tempChart) tempChart.destroy();
-            const now = new Date();
-            const labels = tempHistory.map((_, i) => {
-                const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
-                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            });
+            const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const data = tempHistory.map(h => h.value);
             tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
                     datasets: [{
-                        data: tempHistory,
+                        data,
                         borderColor: '#1683d8',
                         borderWidth: 2,
                         pointRadius: 4,
@@ -175,13 +174,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Tabla de huellas
         function fingerTable() {
+            const actionsHead = currentUser && currentUser.role === 'root'
+                ? '<th class="px-3 py-2 text-left">Acciones</th>' : '';
             return `
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Huella</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Nombre Completo</th>${actionsHead}</tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+              </table>
+            </div>`;
+        }
+
+        // Tabla de tarjetas RFID
+        function rfidTable() {
+            const actionsHead = currentUser && currentUser.role === 'root'
+                ? '<th class="px-3 py-2 text-left">Acciones</th>' : '';
+            return `
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-700">
+                  <tr><th class="px-3 py-2 text-left">UID</th><th class="px-3 py-2 text-left">Usuario</th>${actionsHead}</tr>
+                </thead>
+                <tbody id="rfidTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
             </div>`;
         }
@@ -251,16 +267,18 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div id="accessContainer"></div>
                 </div>
               </div>
-              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                <div class="flex justify-between items-center">
-                  <h4 class="font-bold">Huella Digital</h4>
+              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3 relative">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h4 class="font-bold">Huella Digital</h4>
+                    <p class="text-sm text-slate-500 dark:text-slate-400" id="fingerSensorState">Sensor huella: <span class="font-semibold">OK</span></p>
+                  </div>
                   <button id="btnMoreAccion" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><i data-feather="more-horizontal"></i></button>
                 </div>
-                <p class="text-sm" id="fingerSensorState">Sensor huella: <span class="font-medium">OK</span></p>
-                <button onclick="toggleFingerAdmin()" class="btn w-full text-base">Administrar Huellas</button>
-                <div id="fingerAdmin" class="hidden space-y-4">
+                <button onclick="toggleFingerAdmin()" class="btn w-full">Administrar Huellas</button>
+                <div id="fingerAdmin" class="collapsible space-y-3">
                   ${fingerTable()}
-                  <button class="btn w-full">Agregar Nueva Huella</button>
+                  ${currentUser && currentUser.role === 'root' ? `<div class="admin-footer"><button id="addHuellaBtn" class="btn-outline w-full">Agregar Nueva Huella</button></div>` : ''}
                 </div>
                 <!-- Menú oculto de acciones: Abrir / Cerrar -->
                 <div id="menuAcciones" class="hidden absolute bg-white dark:bg-slate-800 shadow rounded mt-2 right-6 w-40 divide-y divide-slate-200 dark:divide-slate-700">
@@ -268,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <button onclick="cmd('cerrar')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar Acceso principal</button>
                 </div>
               </div>
+              
             </section>`;
             },
 
@@ -280,6 +299,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${moduleCard('RFID Reader')}
                 ${moduleCard('Ultrasonido')}
                 ${moduleCard('Buzzer')}
+                ${moduleCard('Huella Digital')}
+                ${moduleCard('Sensor Temp')}
+                ${moduleCard('RGB LED')}
               </div>
             </section>`,
 
@@ -317,8 +339,19 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                  <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
+                  <div class="flex justify-between items-center">
+                    <h4 class="font-bold">Registro de Eventos de Seguridad</h4>
+                    ${currentUser && currentUser.role === 'root' ? '<button onclick="exportSecurityCSV()" class="px-3 py-1 bg-[#1683d8] hover:bg-[#126bb3] text-white rounded text-sm">Exportar CSV</button>' : ''}
+                  </div>
                   <div id="securityLog"></div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3 md:col-span-2">
+                  <h4 class="font-bold">Tarjetas RFID</h4>
+                  <button onclick="toggleRfidAdmin()" class="btn w-full">Administrar Tarjetas</button>
+                  <div id="rfidAdmin" class="collapsible space-y-3">
+                    ${rfidTable()}
+                    ${currentUser && currentUser.role === 'root' ? `<div class="admin-footer"><button id="addRfidBtn" class="btn-outline w-full">Agregar Nueva Tarjeta</button></div>` : ''}
+                  </div>
                 </div>
               </div>
             </section>`,
@@ -341,6 +374,21 @@ document.addEventListener("DOMContentLoaded", () => {
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
+                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="serialPort" class="flex-1">Puerto Serie:</label>
+                      <input id="serialPort" type="text" class="input-field w-40" />
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="notifEmail" class="flex-1">Email para Notificaciones:</label>
+                      <input id="notifEmail" type="email" class="input-field flex-1 sm:w-60" />
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="backupFreq" class="flex-1">Frecuencia Auto-Backup (días):</label>
+                      <input id="backupFreq" type="number" class="input-field w-24" />
+                    </div>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
+                  </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                   </div>
                 </div>
@@ -399,7 +447,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ["acceso", "lock", "Acceso principal"],
             ["monitoreo", "shield", "Monitoreo"],
             ["estatus", "activity", "Estatus"],
-            ["monitoreo", "eye", "Monitoreo"],
             ["config", "settings", "Configuración"],
             ["cuentas", "users", "Cuentas"],
             ["acerca", "info", "Acerca"]
@@ -437,6 +484,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
             if (id === 'monitoreo') startSecurityMonitoring();
+            if (id === 'config') {
+                loadSerialPort();
+                applySettingsUI();
+            }
         }
 
 
@@ -444,6 +495,9 @@ const applyBtnStyle = () => {};
 
         const toast = (msg, duration = 3000, dismissable = true,
                       cls = 'bg-slate-800 text-white', icon = null) => {
+            while (toastContainer.children.length >= MAX_TOASTS) {
+                toastContainer.removeChild(toastContainer.firstChild);
+            }
             const t = document.createElement('div');
             t.className = `toast ${cls} px-4 py-3 rounded-full shadow-lg flex items-center gap-2`;
             if (icon) {
@@ -499,10 +553,6 @@ const applyBtnStyle = () => {};
             if (t1) t1.textContent = txt;
             if (t2) t2.textContent = txt;
         }
-        function updateConsumption(v) {
-            const el = document.getElementById('powerConsumption');
-            if (el) el.textContent = v === null ? '--' : `${v}A`;
-        }
         function modulesSummary() {
             const cards = document.querySelectorAll('.module-grid .module-card');
             const allOk = Array.from(cards).every(c => c.classList.contains('module-ok'));
@@ -520,97 +570,122 @@ const applyBtnStyle = () => {};
             return m ? parseFloat(m[1]) : null;
         }
 
+        function resultIsOk(str) {
+            if (!str) return false;
+            return !/(no disponible|error|timeout|sin respuesta)/i.test(str);
+        }
+
         async function refreshTemp() {
             try {
                 const data = await api('/comando/leertemp');
                 const val = parseNumber(data.resultado);
                 if (val !== null) {
                     updateTemp(val);
-                    tempHistory.push(val);
-                    if (tempHistory.length > 12) tempHistory.shift();
-                } else {
-                    updateTemp(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateTemp(null);
-            }
-            updateHistoryDisplay();
-        }
-        async function refreshConsumption() {
-            try {
-                const data = await api('/comando/consumo');
-                const c = parseNumber(data.resultado);
-                if (c !== null) {
-                    updateConsumption(c);
-                } else {
-                    updateConsumption(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateConsumption(null);
-            }
-        }
-        function startPolling() {
-            refreshTemp();
-            refreshConsumption();
-            setInterval(refreshTemp, 10000);
-            setInterval(refreshConsumption, 15000);
-        }
-        async function refreshTemp() {
-            try {
-                const data = await api('/comando/leertemp');
-                const val = parseNumber(data.resultado);
-                if (val !== null) {
-                    updateTemp(val);
-                    tempHistory.push(val);
+                    tempHistory.push({ value: val, time: Date.now() });
                     if (tempHistory.length > 12) tempHistory.shift();
                     if (tempChart) {
-                        const now = new Date();
-                        const labels = tempHistory.map((_, i) => {
-                            const d = new Date(now.getTime() - (tempHistory.length - 1 - i) * 3600 * 1000);
-                            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        });
+                        const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                        const data = tempHistory.map(h => h.value);
                         tempChart.data.labels = labels;
-                        tempChart.data.datasets[0].data = tempHistory;
+                        tempChart.data.datasets[0].data = data;
                         tempChart.update();
                     }
+                    lastTempError = false;
                 } else {
                     updateTemp(null);
                 }
             } catch (err) {
-                toast(err.message);
+                if (!lastTempError) toast(err.message);
+                lastTempError = true;
                 updateTemp(null);
             }
             updateHistoryDisplay();
         }
-        async function refreshConsumption() {
-            try {
-                const data = await api('/comando/consumo');
-                const c = parseNumber(data.resultado);
-                if (c !== null) {
-                    updateConsumption(c);
-                } else {
-                    updateConsumption(null);
-                }
-            } catch (err) {
-                toast(err.message);
-                updateConsumption(null);
-            }
-        }
         function startPolling() {
             refreshTemp();
-            refreshConsumption();
             setInterval(refreshTemp, 10000);
-            setInterval(refreshConsumption, 15000);
         }
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
             if (!d) return;
-            const wasHidden = d.classList.contains('hidden');
-            d.classList.toggle('hidden');
-            if (wasHidden && !d.classList.contains('hidden')) {
+            const opening = !d.classList.contains('open');
+            if (opening) {
+                d.classList.add('open');
+                d.style.maxHeight = d.scrollHeight + 'px';
                 loadHuellas();
+            } else {
+                d.style.maxHeight = '0px';
+                d.classList.remove('open');
+            }
+        }
+
+        async function showEnrollModal() {
+            const users = await fetchUsers();
+            if (!users.length) return;
+            const options = users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+            const div = document.createElement('div');
+            div.id = 'enrollModal';
+            div.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            div.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72">
+                <h4 class="font-bold">Asignar Huella</h4>
+                <select id="enrollUserSel" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">${options}</select>
+                <input id="inputNombre" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Nombre">
+                <input id="inputApePat" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Apellido Paterno">
+                <input id="inputApeMat" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Apellido Materno">
+                <div class="flex justify-end gap-2">
+                  <button id="cancelEnroll" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
+                  <button id="confirmEnroll" class="btn btn-sm">Enrolar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(div);
+            feather.replace();
+            div.querySelector('#cancelEnroll').onclick = () => div.remove();
+            div.querySelector('#confirmEnroll').onclick = async () => {
+                const uid = parseInt(div.querySelector('#enrollUserSel').value, 10);
+                const nombre = div.querySelector('#inputNombre').value.trim();
+                const apellidoPat = div.querySelector('#inputApePat').value.trim();
+                const apellidoMat = div.querySelector('#inputApeMat').value.trim();
+                div.remove();
+                await enrollFinger(uid, nombre, apellidoPat, apellidoMat);
+            };
+        }
+
+        async function enrollFinger(usuarioId, nombre, apellidoPat, apellidoMat) {
+            if (!usuarioId) return;
+            const modal = document.createElement('div');
+            modal.id = 'fingerModal';
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72 text-center">
+                <h4 class="font-bold">Enrolando Huella</h4>
+                <p id="fingerMsg" class="text-sm">Iniciando...</p>
+              </div>`;
+            document.body.appendChild(modal);
+            feather.replace();
+            const evt = new EventSource('/serial-events');
+            evt.onmessage = e => {
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = e.data;
+            };
+            try {
+                const resp = await api('/huellas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_id: usuarioId, nombre, apellido_pat: apellidoPat, apellido_mat: apellidoMat })
+                });
+                loadHuellas();
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = resp.msg || 'Huella enrolada';
+                await delay(1500);
+                toast('Huella enrolada');
+            } catch (err) {
+                const p = document.getElementById('fingerMsg');
+                if (p) p.textContent = err.message;
+                toast(err.message);
+            } finally {
+                evt.close();
+                setTimeout(() => modal.remove(), 1000);
             }
         }
         async function updateAccessTable(dateStr) {
@@ -643,12 +718,126 @@ const applyBtnStyle = () => {};
                 toast(err.message);
             }
         }
+
+        function exportSecurityCSV() {
+            if (!securityLogs.length) return;
+            const header = 'hora,evento\n';
+            const csv = header + securityLogs.map(l => {
+                const [h, ev] = l.split(' - ');
+                const e = (ev || '').replace(/"/g, '""');
+                return `"${h}","${e}"`;
+            }).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const aEl = document.createElement('a');
+            aEl.href = url;
+            aEl.download = 'security_log.csv';
+            document.body.appendChild(aEl);
+            aEl.click();
+            document.body.removeChild(aEl);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleRfidAdmin() {
+            const d = document.getElementById('rfidAdmin');
+            if (!d) return;
+            const opening = !d.classList.contains('open');
+            if (opening) {
+                d.classList.add('open');
+                d.style.maxHeight = d.scrollHeight + 'px';
+                loadRfidCards();
+            } else {
+                d.style.maxHeight = '0px';
+                d.classList.remove('open');
+            }
+        }
+
+        async function showRfidModal() {
+            const users = await fetchUsers();
+            if (!users.length) return;
+            const options = users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+            const div = document.createElement('div');
+            div.id = 'rfidModal';
+            div.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            div.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72 text-center">
+                <h4 class="font-bold">Escanee la Tarjeta</h4>
+                <p id="rfidMsg" class="text-sm">Esperando lectura...</p>
+                <select id="rfidUserSel" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">${options}</select>
+                <div class="flex justify-end gap-2">
+                  <button id="cancelRfid" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
+                  <button id="confirmRfid" class="btn btn-sm" disabled>Guardar</button>
+                </div>
+              </div>`;
+            document.body.appendChild(div);
+            feather.replace();
+            let uid = null;
+            try {
+                const resp = await api('/comando/rfid');
+                const m = /UID:\s*([A-F0-9:]+)/i.exec(resp.resultado || '');
+                uid = m ? m[1].toUpperCase() : null;
+                div.querySelector('#rfidMsg').textContent = uid ? `UID: ${uid}` : 'No se detectó tarjeta';
+                if (uid) div.querySelector('#confirmRfid').disabled = false;
+            } catch {
+                div.querySelector('#rfidMsg').textContent = 'Error leyendo tarjeta';
+            }
+            div.querySelector('#cancelRfid').onclick = () => div.remove();
+            div.querySelector('#confirmRfid').onclick = async () => {
+                const usuarioId = parseInt(div.querySelector('#rfidUserSel').value, 10);
+                div.remove();
+                if (uid && usuarioId) await saveRfidCard(uid, usuarioId);
+            };
+        }
+
+        async function saveRfidCard(uid, usuario_id) {
+            try {
+                await api('/rfid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid, usuario_id })
+                });
+                loadRfidCards();
+                toast('Tarjeta registrada');
+            } catch (err) {
+                toast(err.message);
+            }
+        }
+
+        async function loadRfidCards() {
+            try {
+                const list = await api('/rfid');
+                await renderRfidCards(list);
+            } catch {
+                toast('Error cargando tarjetas');
+            }
+        }
+
+        async function renderRfidCards(list) {
+            const tbody = document.getElementById('rfidTBody');
+            if (!tbody) return;
+            const users = await fetchUsers();
+            const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+            tbody.innerHTML = '';
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                const user = userMap[item.usuario_id] || item.usuario_id;
+                let cells = `<td class="px-3 py-1">${item.uid}</td><td class="px-3 py-1">${user}</td>`;
+                if (currentUser && currentUser.role === 'root') {
+                    cells += `<td class="px-3 py-1"><button class="delRfid btn btn-sm btn-danger" data-uid="${item.uid}">Eliminar</button></td>`;
+                }
+                tr.innerHTML = cells;
+                tbody.appendChild(tr);
+            });
+        }
         const moduleActions = {
             'Arduino': 'arduino_status',
             'PIR Sensor': 'pir',
             'RFID Reader': 'rfid',
             'Ultrasonido': 'distancia',
-            'Buzzer': 'alarm'
+            'Buzzer': 'buzzer_status',
+            'Huella Digital': 'huella',
+            'Sensor Temp': 'leertemp',
+            'RGB LED': 'rgb_off'
         };
 
         let moduleInterval;
@@ -682,7 +871,7 @@ const applyBtnStyle = () => {};
 
        async function checkAllModules() {
            for (const mod in moduleActions) {
-               await verifyModule(mod, null, false);
+               await verifyModule(mod, null, false, false);
            }
        }
 
@@ -811,17 +1000,48 @@ const applyBtnStyle = () => {};
                 if (lastDoorOpen !== null) addSecurityLog('Ultrasonido sin respuesta');
                 lastDoorOpen = null;
             }
+
+            try {
+                const rfidData = await api('/comando/rfid');
+                const m = /UID:\s*([A-F0-9:]+)/i.exec(rfidData.resultado || '');
+                const uid = m ? m[1].toUpperCase() : null;
+                if (uid) {
+                    addSecurityLog(`RFID: ${uid}`);
+                    const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                    if (systemArmed && val) {
+                        try {
+                            await api('/system-state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ armed: false })
+                            });
+                            systemArmed = false;
+                            updateSystemStateUI();
+                            addSecurityLog('Sistema desarmado por RFID');
+                            cmd('abrir');
+                        } catch {}
+                    }
+                }
+            } catch {}
         }
 
-        function startSecurityMonitoring() {
+        async function startSecurityMonitoring() {
             clearInterval(monitorInterval);
+            try {
+                const data = await api('/system-state');
+                systemArmed = !!data.armed;
+            } catch (err) {
+                toast(err.message);
+            }
             updateSystemStateUI();
             updateBuzzerUI(false);
             renderSecurityLog();
             checkSensors();
-            monitorInterval = setInterval(checkSensors, 3000);
+            const sInt = parseInt(currentSettings.sensorInterval, 10);
+            const delay = (isFinite(sInt) && sInt > 0 ? sInt : 3) * 1000;
+            monitorInterval = setInterval(checkSensors, delay);
         }
-        async function verifyModule(mod, btn, showChecking = true) {
+        async function verifyModule(mod, btn, showChecking = true, showToast = true) {
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner"></span>';
@@ -843,15 +1063,15 @@ const applyBtnStyle = () => {};
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
                     ok = !!data.available;
-                    toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
+                    if (showToast) toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
                 } else {
                     const data = await api(`/comando/${accion}`);
-                    toast(`Resultado de ${mod}: ${data.resultado}`);
-                    ok = /OK/i.test(data.resultado || '');
+                    if (showToast) toast(`Resultado de ${mod}: ${data.resultado}`);
+                    ok = resultIsOk(data.resultado);
                 }
                 updateModuleCard(mod, ok);
             } catch (err) {
-                toast(err.message);
+                if (showToast) toast(err.message);
                 updateModuleCard(mod, false);
             } finally {
                 if (btn) {
@@ -865,15 +1085,36 @@ const applyBtnStyle = () => {};
         // Variables globales
         let currentUser = null;
         let jwtToken = '';
+        // store objects { value, time }
         let tempHistory = [];
         let tempChart = null;
+        let lastTempError = false;
         let systemArmed = false;
         let monitorInterval = null;
+        let sessionTimer = null;
         let buzzerTimeout = null;
         let lastPir = null;
         let lastDoorOpen = null;
         const securityLogs = [];
         let simulatedMode = true;
+        let currentSettings = {};
+
+        function resetSessionTimer() {
+            const mins = parseInt(currentSettings.sessionTimeout, 10);
+            if (!mins || mins <= 0) return;
+            clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                toast('Sesión finalizada por inactividad');
+                setTimeout(() => location.reload(), 500);
+            }, mins * 60 * 1000);
+        }
+
+        function initSessionTimeout() {
+            ['mousemove', 'keydown', 'click'].forEach(ev =>
+                document.addEventListener(ev, resetSessionTimer)
+            );
+            resetSessionTimer();
+        }
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
@@ -897,6 +1138,17 @@ const applyBtnStyle = () => {};
                 jwtToken = data.token;
                 currentUser = { username: data.username, role: data.role };
                 lblUser.textContent = data.username;
+                if (data.role === 'root') {
+                    try {
+                        currentSettings = await api('/settings');
+                    } catch {}
+                }
+                if (!currentSettings.sensorInterval) currentSettings.sensorInterval = '3';
+                if (!currentSettings.sessionTimeout) currentSettings.sessionTimeout = '15';
+                if (typeof currentSettings.simulatedMode === 'undefined') currentSettings.simulatedMode = 'true';
+                if (!currentSettings.notifEmail) currentSettings.notifEmail = '';
+                if (!currentSettings.backupFreq) currentSettings.backupFreq = '';
+                simulatedMode = /^(true|1)$/.test(currentSettings.simulatedMode);
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -905,6 +1157,7 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
                         if (!s.available) {
@@ -926,6 +1179,35 @@ const applyBtnStyle = () => {};
             } catch {
                 toast('Error cargando usuarios');
             }
+        }
+
+        async function loadSerialPort() {
+            try {
+                const data = await api('/settings/serial-port');
+                const inp = document.getElementById('serialPort');
+                if (inp) inp.value = data.serialPort || '';
+            } catch {
+                toast('Error cargando configuración');
+            }
+        }
+
+        function applySettingsUI() {
+            const acc = document.getElementById('chkNotifAcc');
+            const sec = document.getElementById('chkNotifSec');
+            const sys = document.getElementById('chkNotifSys');
+            if (acc) acc.checked = /^(true|1)$/.test(currentSettings.notifAcc);
+            if (sec) sec.checked = /^(true|1)$/.test(currentSettings.notifSec);
+            if (sys) sys.checked = /^(true|1)$/.test(currentSettings.notifSys);
+            const email = document.getElementById('notifEmail');
+            if (email) email.value = currentSettings.notifEmail || '';
+            const bFreq = document.getElementById('backupFreq');
+            if (bFreq) bFreq.value = currentSettings.backupFreq || '';
+            const chkSim = document.getElementById('chkSimMode');
+            if (chkSim) chkSim.checked = /^(true|1)$/.test(currentSettings.simulatedMode);
+            const sInt = document.getElementById('sensorInterval');
+            if (sInt) sInt.value = currentSettings.sensorInterval || '';
+            const sTo = document.getElementById('sessionTimeout');
+            if (sTo) sTo.value = currentSettings.sessionTimeout || '';
         }
 
         function renderUsers(list) {
@@ -952,10 +1234,19 @@ const applyBtnStyle = () => {};
 
         async function loadHuellas() {
             try {
-                const ids = await api('/huellas');
-                renderHuellas(ids);
+                const list = await api('/huellas');
+                renderHuellas(list);
             } catch {
                 toast('Error cargando huellas');
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                return await api('/users');
+            } catch {
+                toast('Error cargando usuarios');
+                return [];
             }
         }
 
@@ -963,9 +1254,14 @@ const applyBtnStyle = () => {};
             const tbody = document.getElementById('fingerTBody');
             if (!tbody) return;
             tbody.innerHTML = '';
-            list.forEach(id => {
+            list.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-3 py-1">${id}</td>`;
+                const full = `${item.nombre || ''} ${item.apellido_pat || ''} ${item.apellido_mat || ''}`.trim();
+                let cells = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${full}</td>`;
+                if (currentUser && currentUser.role === 'root') {
+                    cells += `<td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
+                }
+                tr.innerHTML = cells;
                 tbody.appendChild(tr);
             });
         }
@@ -1009,27 +1305,153 @@ const applyBtnStyle = () => {};
                     await api(`/users/${id}`, { method: 'DELETE' });
                     loadUsers();
                 } catch (err) { toast(err.message); }
+            } else if (e.target.classList.contains('delFinger')) {
+                const id = e.target.dataset.id;
+                if (!confirm('¿Eliminar huella?')) return;
+                try {
+                    await api(`/huellas/${id}`, { method: 'DELETE' });
+                    loadHuellas();
+                } catch (err) { toast(err.message); }
+            } else if (e.target.classList.contains('delRfid')) {
+                const uid = e.target.dataset.uid;
+                if (!confirm('¿Eliminar tarjeta?')) return;
+                try {
+                    await api(`/rfid/${uid}`, { method: 'DELETE' });
+                    loadRfidCards();
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#toggleArmBtn')) {
-                systemArmed = !systemArmed;
-                updateSystemStateUI();
+                try {
+                    const data = await api('/system-state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ armed: !systemArmed })
+                    });
+                    systemArmed = !!data.armed;
+                    updateSystemStateUI();
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#testBuzzerBtn')) {
                 cmd('alarm');
             } else if (e.target.closest('#savePrefsBtn')) {
+                const port = document.getElementById('serialPort').value.trim();
+                if (port) {
+                    try {
+                        await api('/settings/serial-port', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ serialPort: port })
+                        });
+                        await api('/status/arduino').then(s => {
+                            if (!s.available) showArduinoAlert();
+                        });
+                    } catch (err) {
+                        toast(err.message);
+                        return;
+                    }
+                }
+
+                const emailVal = document.getElementById('notifEmail').value.trim();
+                if (emailVal && !/^\S+@\S+\.\S+$/.test(emailVal)) {
+                    toast('Correo inválido');
+                    return;
+                }
+
+                const prefs = {
+                    notifAcc: document.getElementById('chkNotifAcc').checked,
+                    notifSec: document.getElementById('chkNotifSec').checked,
+                    notifSys: document.getElementById('chkNotifSys').checked,
+                    notifEmail: emailVal,
+                    backupFreq: document.getElementById('backupFreq').value,
+                    simulatedMode: document.getElementById('chkSimMode').checked
+                };
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(prefs)
+                    });
+                    Object.assign(currentSettings, prefs);
+                    simulatedMode = !!prefs.simulatedMode;
+                } catch (err) {
+                    toast(err.message);
+                    return;
+                }
                 toast('Preferencias guardadas');
+                document.querySelector('#menu button[data-sec="config"]')?.click();
             } else if (e.target.closest('#backupBtn')) {
-                toast('Copia de seguridad creada');
+                try {
+                    const res = await fetch('/backup', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${jwtToken}` }
+                    });
+                    if (!res.ok) throw new Error('Error');
+                    const blob = await res.blob();
+                    const disp = res.headers.get('Content-Disposition') || '';
+                    const match = disp.match(/filename="([^\"]+)"/);
+                    const fname = match ? match[1] : 'backup.db';
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fname;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast('Copia de seguridad creada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#restoreBtn')) {
-                toast('Restaurando copia...');
+                restoreInput.click();
             } else if (e.target.closest('#clearCacheBtn')) {
-                toast('Caché limpiada');
+                try {
+                    await api('/clear-cache', { method: 'POST' });
+                    toast('Caché limpiada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#applySensorInterval')) {
-                toast('Intervalo aplicado');
+                const val = parseInt(document.getElementById('sensorInterval').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sensorInterval: val })
+                    });
+                    currentSettings.sensorInterval = String(val);
+                    if (monitorInterval) {
+                        clearInterval(monitorInterval);
+                        monitorInterval = setInterval(checkSensors, val * 1000);
+                    }
+                    toast('Intervalo aplicado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#applySessionTimeout')) {
-                toast('Tiempo de espera actualizado');
+                const val = parseInt(document.getElementById('sessionTimeout').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionTimeout: val })
+                    });
+                    currentSettings.sessionTimeout = String(val);
+                    resetSessionTimer();
+                    toast('Tiempo de espera actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#updateBtn')) {
-                toast('Buscando actualizaciones...');
+                try {
+                    const data = await api('/system/update', { method: 'POST' });
+                    toast(data.msg || 'Actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#restartModulesBtn')) {
-                toast('Reiniciando módulos...');
+                try {
+                    const data = await api('/system/restart', { method: 'POST' });
+                    toast(data.msg || 'Reiniciando...');
+                } catch (err) { toast(err.message); }
+            } else if (e.target.closest('#addHuellaBtn')) {
+                showEnrollModal();
+            } else if (e.target.closest('#addRfidBtn')) {
+                showRfidModal();
             }
         });
 
@@ -1039,6 +1461,21 @@ const applyBtnStyle = () => {};
             document.body.classList.toggle('sidebar-collapsed');
             feather.replace();
         };
+
+        if (restoreInput) {
+            restoreInput.onchange = async () => {
+                if (!restoreInput.files.length) return;
+                const fd = new FormData();
+                fd.append('backup', restoreInput.files[0]);
+                try {
+                    await api('/restore', { method: 'POST', body: fd });
+                    toast('Copia restaurada');
+                } catch (err) {
+                    toast(err.message);
+                }
+                restoreInput.value = '';
+            };
+        }
 
         // Cerrar menúAcciones si clic afuera
         document.addEventListener('click', e => {
@@ -1056,9 +1493,13 @@ const applyBtnStyle = () => {};
         // Exponer funciones usadas por atributos HTML
         window.cmd = cmd;
         window.toggleFingerAdmin = toggleFingerAdmin;
+        window.toggleRfidAdmin = toggleRfidAdmin;
         window.updateAccessTable = updateAccessTable;
         window.exportAccessCSV = exportAccessCSV;
+        window.exportSecurityCSV = exportSecurityCSV;
         window.verifyModule = verifyModule;
+        window.showEnrollModal = showEnrollModal;
+        window.showRfidModal = showRfidModal;
 
         // Inicializar Feather Icons
         feather.replace();

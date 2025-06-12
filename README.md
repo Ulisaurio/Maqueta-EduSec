@@ -18,6 +18,10 @@ omitted the app defaults to `COM5`. The application serves the contents of
 `PanelDomoticoWeb/public`. Open `http://localhost:3000` after starting the
 server.
 
+You can also change the port from the web interface. Visit the "Configuración"
+section and update the **Puerto Serie** field. The chosen value is stored in
+`PanelDomoticoWeb/config.json` so it persists across restarts.
+
 ## Design Overview
 
 The UI includes:
@@ -26,6 +30,8 @@ The UI includes:
 - A responsive dashboard with a sidebar menu
 - Theme toggle (light/dark)
 - Module verification with loading feedback
+- Silent buzzer status checks (the buzzer only sounds on alarms or when
+  using the "Probar" testing button)
 - Temperature chart with hover tooltips
 
 

@@ -9,23 +9,27 @@
 #define RELAY_PIN    4
 #define PIR_PIN      2
 #define TRIG_PIN     8
-#define ECHO_PIN     9
-#define SS_PIN       10
-#define RST_PIN      11
+#define ECHO_PIN     5
+#define SDA_PIN      10          // SS
+#define RST_PIN      9           // Reset
 #define BUZZER_PIN   7
 #define LED_R        3
-#define LED_G        5
+#define LED_G        44          // PWM safe on Mega
 #define LED_B        6
-// Fingerprint sensor on Serial1 (RX1=19, TX1=18)
+// Fingerprint sensor on Serial1 (TX sensor→19, RX sensor←18, 5V)
 
 // ----------------------------------------------------------
 Adafruit_Fingerprint finger(&Serial1);  // uses hardware Serial1
-MFRC522 rfid(SS_PIN, RST_PIN);
+MFRC522 rfid(SDA_PIN, RST_PIN);
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
 #define CMD_BUF_SIZE 64
 char    cmdBuffer[CMD_BUF_SIZE];
+
+// Flags set after detecting each peripheral during setup()
+bool    fingerPresent = false;
+bool    rfidPresent   = false;
 
 // Helper to set RGB LED
 const bool COMMON_CATHODE = true;
@@ -51,11 +55,22 @@ void setup() {
   digitalWrite(RELAY_PIN, HIGH);
 
   Serial1.begin(57600);
+  delay(200);               // allow sensor to power up
   finger.begin(57600);
-  if (!finger.verifyPassword()) Serial.println(F("⚠️ Huella no detectada"));
+  for (uint8_t i = 0; i < 3 && !fingerPresent; i++) {
+    fingerPresent = finger.verifyPassword();
+    if (!fingerPresent) delay(200);
+  }
+  if (fingerPresent) {
+    Serial.println(F("🟢 Sensor de huella detectado"));
+  } else {
+    Serial.println(F("🔴 Sensor de huella NO detectado"));
+  }
 
   SPI.begin();
   rfid.PCD_Init();
+  Serial.println(F("🟢 RFID iniciado"));
+  rfidPresent = true;
 
   sensors.begin();
 
@@ -99,6 +114,7 @@ uint8_t borrarHuella(uint8_t id) {
 }
 
 bool verificarHuella() {
+  if (!fingerPresent) return false;
   if (finger.getImage() != FINGERPRINT_OK) return false;
   if (finger.image2Tz() != FINGERPRINT_OK) return false;
   if (finger.fingerFastSearch() != FINGERPRINT_OK) return false;
@@ -137,11 +153,6 @@ void loop() {
   while (end > 0 && (cmd[end - 1] == ' ' || cmd[end - 1] == '\t')) {
     cmd[--end] = '\0';
   }
-  String cmd = bufferIn;
-  cmd.trim();
-  cmd.toLowerCase();
-  bufferIn = "";
-  cmdReady = false;
 
   if (strcmp(cmd, "abrir") == 0) {
     digitalWrite(RELAY_PIN, LOW);
@@ -152,18 +163,27 @@ void loop() {
     Serial.println(F("Acceso principal cerrado"));
   }
   else if (strncmp(cmd, "enrolar ", 8) == 0) {
-    int id = atoi(cmd + 8);
-    uint8_t r = enrolarHuella(id);
-    if (r == 0) Serial.println(F("Huella enrolada"));
-    else Serial.println(F("Error enrolando"));
+    if (!fingerPresent) {
+      Serial.println(F("Sensor de huella no disponible"));
+    } else {
+      int id = atoi(cmd + 8);
+      uint8_t r = enrolarHuella(id);
+      if (r == 0) Serial.println(F("Huella enrolada"));
+      else Serial.println(F("Error enrolando"));
+    }
   }
-  else if (cmd.startsWith("borrar ")) {
-    int id = cmd.substring(7).toInt();
-    if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
-    else Serial.println(F("Error borrando"));
+  else if (strncmp(cmd, "borrar ", 7) == 0) {
+    if (!fingerPresent) {
+      Serial.println(F("Sensor de huella no disponible"));
+    } else {
+      int id = atoi(cmd + 7);
+      if (borrarHuella(id) == FINGERPRINT_OK) Serial.println(F("Huella borrada"));
+      else Serial.println(F("Error borrando"));
+    }
   }
-  else if (cmd == "huella") {
-    if (verificarHuella()) Serial.println(F("Huella válida"));
+  else if (strcmp(cmd, "huella") == 0) {
+    if (!fingerPresent) Serial.println(F("Sensor de huella no disponible"));
+    else if (verificarHuella()) Serial.println(F("Huella válida"));
     else Serial.println(F("Huella no válida"));
   }
   else if (strcmp(cmd, "distancia") == 0) {
@@ -182,7 +202,10 @@ void loop() {
     Serial.println(v);
   }
   else if (strcmp(cmd, "rfid") == 0) {
-    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    if (!rfidPresent) {
+      Serial.println(F("RFID no disponible"));
+    }
+    else if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
       Serial.print(F("UID: "));
       for (byte i = 0; i < rfid.uid.size; i++) {
         if (rfid.uid.uidByte[i] < 0x10) Serial.print('0');
@@ -205,16 +228,19 @@ void loop() {
     }
     Serial.println(listado);
   }
+  else if (strcmp(cmd, "buzzer_status") == 0) {
+    Serial.println(F("Buzzer listo"));
+  }
   else if (strcmp(cmd, "alarm") == 0) {
     sonarAlarma();
     Serial.println(F("Alarma sonó"));
   }
-  else if (cmd.startsWith("rgb ")) {
-    String c = cmd.substring(4);
-    if (c == "red")      { setRGB(255,0,0); Serial.println("RGB listo"); }
-    else if (c == "green") { setRGB(0,255,0); Serial.println("RGB listo"); }
-    else if (c == "blue")  { setRGB(0,0,255); Serial.println("RGB listo"); }
-    else if (c == "off")   { rgbOff(); Serial.println("RGB listo"); }
+  else if (strncmp(cmd, "rgb ", 4) == 0) {
+    const char *c = cmd + 4;
+    if (strcmp(c, "red") == 0)      { setRGB(255,0,0); Serial.println("RGB listo"); }
+    else if (strcmp(c, "green") == 0){ setRGB(0,255,0); Serial.println("RGB listo"); }
+    else if (strcmp(c, "blue") == 0) { setRGB(0,0,255); Serial.println("RGB listo"); }
+    else if (strcmp(c, "off") == 0)  { rgbOff(); Serial.println("RGB listo"); }
     else Serial.println(F("rgb inválido"));
   }
   else if (strcmp(cmd, "leertemp") == 0) {
