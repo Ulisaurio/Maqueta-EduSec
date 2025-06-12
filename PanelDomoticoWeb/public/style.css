@@ -436,6 +436,16 @@ body {
     pointer-events: none;
 }
 
+/* simple collapsible container */
+.collapsible {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease;
+}
+.collapsible.open {
+    max-height: 999px;
+}
+
 .details-card > div {
     padding: 1rem;
     animation: cardOpen .3s ease-out;

@@ -262,14 +262,16 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div id="accessContainer"></div>
                 </div>
               </div>
-              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
-                <div class="flex justify-between items-center">
-                  <h4 class="font-bold">Huella Digital</h4>
+              <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3 relative">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h4 class="font-bold">Huella Digital</h4>
+                    <p class="text-sm text-slate-500 dark:text-slate-400" id="fingerSensorState">Sensor huella: <span class="font-semibold">OK</span></p>
+                  </div>
                   <button id="btnMoreAccion" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><i data-feather="more-horizontal"></i></button>
                 </div>
-                <p class="text-sm" id="fingerSensorState">Sensor huella: <span class="font-medium">OK</span></p>
-                <button onclick="toggleFingerAdmin()" class="btn w-full text-base">Administrar Huellas</button>
-                <div id="fingerAdmin" class="hidden space-y-4">
+                <button onclick="toggleFingerAdmin()" class="btn w-full">Administrar Huellas</button>
+                <div id="fingerAdmin" class="collapsible space-y-3">
                   ${fingerTable()}
                   <button id="addHuellaBtn" class="btn w-full">Agregar Nueva Huella</button>
                 </div>
@@ -339,10 +341,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div id="securityLog"></div>
                 </div>
                 ${currentUser && currentUser.role === 'root' ? `
-                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 space-y-4">
+                <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-4 space-y-3">
                   <h4 class="font-bold">Tarjetas RFID</h4>
-                  <button onclick="toggleRfidAdmin()" class="btn w-full text-base">Administrar Tarjetas</button>
-                  <div id="rfidAdmin" class="hidden space-y-4">
+                  <button onclick="toggleRfidAdmin()" class="btn w-full">Administrar Tarjetas</button>
+                  <div id="rfidAdmin" class="collapsible space-y-3">
                     ${rfidTable()}
                     <button id="addRfidBtn" class="btn w-full">Agregar Nueva Tarjeta</button>
                   </div>
@@ -588,10 +590,14 @@ const applyBtnStyle = () => {};
         function toggleFingerAdmin() {
             const d = document.getElementById('fingerAdmin');
             if (!d) return;
-            const wasHidden = d.classList.contains('hidden');
-            d.classList.toggle('hidden');
-            if (wasHidden && !d.classList.contains('hidden')) {
+            const opening = !d.classList.contains('open');
+            if (opening) {
+                d.classList.add('open');
+                d.style.maxHeight = d.scrollHeight + 'px';
                 loadHuellas();
+            } else {
+                d.style.maxHeight = '0px';
+                d.classList.remove('open');
             }
         }
 
@@ -717,10 +723,14 @@ const applyBtnStyle = () => {};
         function toggleRfidAdmin() {
             const d = document.getElementById('rfidAdmin');
             if (!d) return;
-            const wasHidden = d.classList.contains('hidden');
-            d.classList.toggle('hidden');
-            if (wasHidden && !d.classList.contains('hidden')) {
+            const opening = !d.classList.contains('open');
+            if (opening) {
+                d.classList.add('open');
+                d.style.maxHeight = d.scrollHeight + 'px';
                 loadRfidCards();
+            } else {
+                d.style.maxHeight = '0px';
+                d.classList.remove('open');
             }
         }
 
