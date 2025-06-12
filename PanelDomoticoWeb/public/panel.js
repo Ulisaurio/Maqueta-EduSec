@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-100 dark:bg-slate-700">
-                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Usuario</th><th class="px-3 py-2 text-left">Acciones</th></tr>
+                  <tr><th class="px-3 py-2 text-left">ID Huella</th><th class="px-3 py-2 text-left">Nombre Completo</th><th class="px-3 py-2 text-left">Acciones</th></tr>
                 </thead>
                 <tbody id="fingerTBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
               </table>
@@ -605,6 +605,9 @@ const applyBtnStyle = () => {};
               <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72">
                 <h4 class="font-bold">Asignar Huella</h4>
                 <select id="enrollUserSel" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent">${options}</select>
+                <input id="inputNombre" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Nombre">
+                <input id="inputApePat" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Apellido Paterno">
+                <input id="inputApeMat" class="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-transparent" placeholder="Apellido Materno">
                 <div class="flex justify-end gap-2">
                   <button id="cancelEnroll" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
                   <button id="confirmEnroll" class="btn btn-sm">Enrolar</button>
@@ -615,12 +618,15 @@ const applyBtnStyle = () => {};
             div.querySelector('#cancelEnroll').onclick = () => div.remove();
             div.querySelector('#confirmEnroll').onclick = async () => {
                 const uid = parseInt(div.querySelector('#enrollUserSel').value, 10);
+                const nombre = div.querySelector('#inputNombre').value.trim();
+                const apellidoPat = div.querySelector('#inputApePat').value.trim();
+                const apellidoMat = div.querySelector('#inputApeMat').value.trim();
                 div.remove();
-                await enrollFinger(uid);
+                await enrollFinger(uid, nombre, apellidoPat, apellidoMat);
             };
         }
 
-        async function enrollFinger(usuarioId) {
+        async function enrollFinger(usuarioId, nombre, apellidoPat, apellidoMat) {
             if (!usuarioId) return;
             const modal = document.createElement('div');
             modal.id = 'fingerModal';
@@ -641,7 +647,7 @@ const applyBtnStyle = () => {};
                 const resp = await api('/huellas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario_id: usuarioId })
+                    body: JSON.stringify({ usuario_id: usuarioId, nombre, apellido_pat: apellidoPat, apellido_mat: apellidoMat })
                 });
                 loadHuellas();
                 const p = document.getElementById('fingerMsg');
@@ -1165,7 +1171,8 @@ const applyBtnStyle = () => {};
             tbody.innerHTML = '';
             list.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${item.username}</td><td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
+                const full = `${item.nombre || ''} ${item.apellido_pat || ''} ${item.apellido_mat || ''}`.trim();
+                tr.innerHTML = `<td class="px-3 py-1">${item.huella_id}</td><td class="px-3 py-1">${full}</td><td class="px-3 py-1"><button class="delFinger btn btn-sm btn-danger" data-id="${item.huella_id}">Eliminar</button></td>`;
                 tbody.appendChild(tr);
             });
         }
