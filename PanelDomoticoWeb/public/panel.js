@@ -15,15 +15,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const clockNow = document.getElementById("clockNow");
     const arduinoAlert = document.getElementById("arduinoAlert");
     const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+    let arduinoConnected = false;
     const restoreInput = document.getElementById("restoreFileInput");
 
     if (arduinoAlertClose) {
-        arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
+        arduinoAlertClose.onclick = async () => {
+            const s = await api('/status/arduino').catch(() => ({ available: false }));
+            updateArduinoAlert(s.available);
+            if (s.available) return;
+            showArduinoReminder();
+        };
     }
 
-    document.addEventListener('keydown', e => {
+    document.addEventListener('keydown', async e => {
         if (e.key === 'Escape' && !arduinoAlert.classList.contains('hidden')) {
-            arduinoAlert.classList.add('hidden');
+            const s = await api('/status/arduino').catch(() => ({ available: false }));
+            updateArduinoAlert(s.available);
+            if (!s.available) showArduinoReminder();
         }
     });
 
@@ -36,6 +44,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const showArduinoReminder = () => {
         toast('Arduino no conectado', null, false, 'warning-toast', 'alert-triangle');
+    };
+
+    const updateArduinoAlert = available => {
+        arduinoConnected = !!available;
+        if (arduinoAlert) {
+            if (available) {
+                arduinoAlert.classList.add('hidden');
+            } else {
+                arduinoAlert.classList.remove('hidden');
+                feather.replace();
+            }
+        }
     };
 
         // Generadores de tarjetas
@@ -1114,6 +1134,7 @@ const applyBtnStyle = () => {};
                 if (accion === 'arduino_status') {
                     const data = await api('/status/arduino');
                     ok = !!data.available;
+                    updateArduinoAlert(ok);
                     if (showToast) toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
                 } else {
                     const data = await api(`/comando/${accion}`);
@@ -1214,8 +1235,8 @@ const applyBtnStyle = () => {};
                     initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
+                        updateArduinoAlert(s.available);
                         if (!s.available) {
-                            showArduinoAlert();
                             showArduinoReminder();
                         }
                     }).catch(() => {});
@@ -1397,7 +1418,8 @@ const applyBtnStyle = () => {};
                             body: JSON.stringify({ serialPort: port })
                         });
                         await api('/status/arduino').then(s => {
-                            if (!s.available) showArduinoAlert();
+                            updateArduinoAlert(s.available);
+                            if (!s.available) showArduinoReminder();
                         });
                     } catch (err) {
                         toast(err.message);
