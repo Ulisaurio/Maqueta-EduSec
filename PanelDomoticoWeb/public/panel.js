@@ -909,7 +909,7 @@ const applyBtnStyle = () => {};
            setCheckingStatuses();
            updateModulesSummary();
            checkAllModules();
-           moduleInterval = setInterval(checkAllModules, 60000);
+           moduleInterval = setInterval(checkAllModules, 10000);
        }
 
         function updateSystemStateUI() {
@@ -1190,6 +1190,7 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    startModuleMonitoring();
                     initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
