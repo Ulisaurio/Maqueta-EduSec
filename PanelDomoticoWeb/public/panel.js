@@ -651,6 +651,13 @@ const applyBtnStyle = () => {};
             return m ? parseFloat(m[1]) : null;
         }
 
+        function isValidTemp(v) {
+            if (v === null || isNaN(v)) return false;
+            if (v <= -55 || v >= 125 || v === 85 || v === -127) return false;
+            if (lastValidTemp !== null && Math.abs(v - lastValidTemp) > MAX_TEMP_JUMP) return false;
+            return true;
+        }
+
         function resultIsOk(str) {
             if (!str) return false;
             return !/(no disponible|error|timeout|sin respuesta)/i.test(str);
@@ -660,8 +667,9 @@ const applyBtnStyle = () => {};
             try {
                 const data = await api('/comando/leertemp');
                 const val = parseNumber(data.resultado);
-                if (val !== null) {
+                if (isValidTemp(val)) {
                     updateTemp(val);
+                    lastValidTemp = val;
                     tempHistory.push({ value: val, time: Date.now() });
                     const cutoff = Date.now() - HISTORY_MS;
                     tempHistory = tempHistory.filter(h => h.time >= cutoff);
@@ -675,7 +683,8 @@ const applyBtnStyle = () => {};
                     }
                     lastTempError = false;
                 } else {
-                    updateTemp(null);
+                    if (val === null) updateTemp(null); // sensor error
+                    else updateTemp(lastValidTemp);
                 }
             } catch (err) {
                 if (!lastTempError) toast(err.message);
@@ -1198,13 +1207,21 @@ const applyBtnStyle = () => {};
         const moduleStatus = {};
         // store objects { value, time }
         const HISTORY_MS = 12 * 60 * 60 * 1000; // 12 hours
+        const MAX_TEMP_JUMP = 10; // ignore sudden jumps >10°C
         let tempHistory = [];
+        let lastValidTemp = null;
         try {
             const stored = localStorage.getItem('tempHistory');
             const arr = JSON.parse(stored);
             if (Array.isArray(arr)) {
                 const cutoff = Date.now() - HISTORY_MS;
-                tempHistory = arr.filter(e => e && e.time && e.time >= cutoff);
+                tempHistory = arr.filter(e => {
+                    return e && e.time && e.time >= cutoff && typeof e.value === 'number'
+                        && e.value > -55 && e.value < 125 && e.value !== 85 && e.value !== -127;
+                });
+                if (tempHistory.length) {
+                    lastValidTemp = tempHistory[tempHistory.length - 1].value;
+                }
             }
         } catch {}
         let tempChart = null;
