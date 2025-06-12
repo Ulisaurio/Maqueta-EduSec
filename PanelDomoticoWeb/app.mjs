@@ -12,7 +12,9 @@ import {
     deleteHuella,
     addRfidCard,
     getRfidCards,
-    deleteRfidCard
+    deleteRfidCard,
+    getSetting,
+    setSetting
 } from './db.js';
 import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
@@ -392,6 +394,40 @@ app.get('/serial-events', (req, res) => {
 });
 
 // --------- Ajustes del sistema ---------
+
+app.get('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        const rows = await db.all('SELECT clave, valor FROM ajustes');
+        const obj = {};
+        for (const r of rows) obj[r.clave] = r.valor;
+        res.json(obj);
+    } catch (err) {
+        console.error('Error en GET /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.patch('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const updates = req.body || {};
+    if (typeof updates !== 'object') {
+        return res.status(400).json({ msg: 'Datos inválidos' });
+    }
+    try {
+        for (const [k, v] of Object.entries(updates)) {
+            await setSetting(k, String(v));
+        }
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en PATCH /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
 
 app.get('/settings/serial-port', async (req, res) => {
     const cfg = await readConfig();

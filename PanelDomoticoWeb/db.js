@@ -79,6 +79,14 @@ export async function initDb() {
     )
   `);
 
+    // Tabla de ajustes generales
+    await db.exec(`
+    CREATE TABLE IF NOT EXISTS ajustes (
+      clave TEXT PRIMARY KEY,
+      valor TEXT
+    )
+  `);
+
     // Revisar si existe al menos un usuario root por defecto; si no, lo creamos
     const row = await db.get(`SELECT COUNT(*) AS count FROM usuarios`);
     if (row.count === 0) {
@@ -171,4 +179,21 @@ export async function getRfidCards() {
 export async function deleteRfidCard(uid) {
     const db = await getDb();
     return db.run('DELETE FROM rfid_cards WHERE uid = ?', [uid]);
+}
+
+// ----- Ajustes generales -----
+
+export async function getSetting(clave) {
+    const db = await getDb();
+    const row = await db.get('SELECT valor FROM ajustes WHERE clave = ?', [clave]);
+    return row ? row.valor : null;
+}
+
+export async function setSetting(clave, valor) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO ajustes (clave, valor) VALUES (?, ?)
+         ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+        [clave, valor]
+    );
 }
