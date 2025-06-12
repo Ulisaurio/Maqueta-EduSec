@@ -110,7 +110,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`;
         }
 
-        function updateHistoryDisplay() {
+       function updateHistoryDisplay() {
+            const cutoff = Date.now() - HISTORY_MS;
+            tempHistory = tempHistory.filter(h => h.time >= cutoff);
             const canvas = document.getElementById('sparklineChart');
             const msg = document.getElementById('noHistoryMsg');
             if (!canvas || !msg) return;
@@ -123,7 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        function renderSparkline() {
+       function renderSparkline() {
+            const cutoff = Date.now() - HISTORY_MS;
+            tempHistory = tempHistory.filter(h => h.time >= cutoff);
             const ctx = document.getElementById('sparklineChart').getContext('2d');
             if (tempChart) tempChart.destroy();
             const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -629,7 +633,9 @@ const applyBtnStyle = () => {};
                 if (val !== null) {
                     updateTemp(val);
                     tempHistory.push({ value: val, time: Date.now() });
-                    if (tempHistory.length > 12) tempHistory.shift();
+                    const cutoff = Date.now() - HISTORY_MS;
+                    tempHistory = tempHistory.filter(h => h.time >= cutoff);
+                    localStorage.setItem('tempHistory', JSON.stringify(tempHistory));
                     if (tempChart) {
                         const labels = tempHistory.map(h => new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                         const data = tempHistory.map(h => h.value);
@@ -1161,7 +1167,16 @@ const applyBtnStyle = () => {};
         let jwtToken = '';
         const moduleStatus = {};
         // store objects { value, time }
+        const HISTORY_MS = 12 * 60 * 60 * 1000; // 12 hours
         let tempHistory = [];
+        try {
+            const stored = localStorage.getItem('tempHistory');
+            const arr = JSON.parse(stored);
+            if (Array.isArray(arr)) {
+                const cutoff = Date.now() - HISTORY_MS;
+                tempHistory = arr.filter(e => e && e.time && e.time >= cutoff);
+            }
+        } catch {}
         let tempChart = null;
         let lastTempError = false;
         let systemArmed = false;
