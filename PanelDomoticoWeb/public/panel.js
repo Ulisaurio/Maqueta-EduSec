@@ -492,6 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (id === 'cuentas') loadUsers();
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
+            if (id === 'home' || id === 'acceso') refreshDoorState();
             if (id === 'estatus') startModuleMonitoring();
             if (id === 'monitoreo') startSecurityMonitoring();
             if (id === 'config') {
@@ -626,6 +627,18 @@ const applyBtnStyle = () => {};
                 updateTemp(null);
             }
             updateHistoryDisplay();
+        }
+
+        async function refreshDoorState() {
+            try {
+                const data = await api('/comando/distancia');
+                const cm = parseNumber(data.resultado);
+                const open = cm !== null ? cm > 10 : false;
+                updateDoorUI(open);
+                updateDoor(open ? '🔓 Abierta' : '🔒 Cerrada');
+            } catch (err) {
+                updateDoorUI(null);
+            }
         }
         function startPolling() {
             refreshTemp();
@@ -945,13 +958,19 @@ const applyBtnStyle = () => {};
 
         function updateDoorUI(open) {
             const el = document.getElementById('doorStatus');
-            if (!el) return;
+            if (el) {
+                if (open === null) {
+                    el.textContent = 'Sin respuesta';
+                    el.className = 'status unavailable';
+                } else {
+                    el.textContent = open ? 'Puerta Abierta' : 'Puerta Cerrada';
+                    el.className = 'status ' + (open ? 'faulty' : 'inactive');
+                }
+            }
             if (open === null) {
-                el.textContent = 'Sin respuesta';
-                el.className = 'status unavailable';
+                updateDoor('--');
             } else {
-                el.textContent = open ? 'Puerta Abierta' : 'Puerta Cerrada';
-                el.className = 'status ' + (open ? 'faulty' : 'inactive');
+                updateDoor(open ? '🔓 Abierta' : '🔒 Cerrada');
             }
         }
 
@@ -1190,6 +1209,7 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    refreshDoorState();
                     startModuleMonitoring();
                     initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
