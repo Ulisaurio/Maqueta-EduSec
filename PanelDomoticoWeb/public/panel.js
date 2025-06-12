@@ -683,13 +683,12 @@ const applyBtnStyle = () => {};
                     }
                     lastTempError = false;
                 } else {
-                    if (val === null) updateTemp(null); // sensor error
-                    else updateTemp(lastValidTemp);
+                    updateTemp(lastValidTemp);
                 }
             } catch (err) {
                 if (!lastTempError) toast(err.message);
                 lastTempError = true;
-                updateTemp(null);
+                updateTemp(lastValidTemp);
             }
             updateHistoryDisplay();
         }
