@@ -3,16 +3,25 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
+import os from 'os';
+import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { exec, spawn } from 'child_process';
 import {
     getDb,
     initDb,
+    closeDb,
+    setDbInstance,
+    openDb,
     addHuella,
     deleteHuella,
     addRfidCard,
     getRfidCards,
-    deleteRfidCard
+    deleteRfidCard,
+    getSetting,
+    setSetting,
+    DB_PATH
 } from './db.js';
 import sendSerial, { isArduinoAvailable, sendSerialStream, serialEmitter } from './util/sendSerial.mjs';
 import { readConfig, writeConfig } from './util/config.mjs';
@@ -32,6 +41,7 @@ const JWT_SECRET = 'cambio_esta_clave_por_una_aleatoria_y_segura';
 // ———————— MIDDLEWARES ————————
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+const upload = multer({ dest: os.tmpdir() });
 
 // ———————— INICIALIZAR BASE DE DATOS ————————
 let db;
@@ -393,6 +403,40 @@ app.get('/serial-events', (req, res) => {
 
 // --------- Ajustes del sistema ---------
 
+app.get('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        const rows = await db.all('SELECT clave, valor FROM ajustes');
+        const obj = {};
+        for (const r of rows) obj[r.clave] = r.valor;
+        res.json(obj);
+    } catch (err) {
+        console.error('Error en GET /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+app.patch('/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const updates = req.body || {};
+    if (typeof updates !== 'object') {
+        return res.status(400).json({ msg: 'Datos inválidos' });
+    }
+    try {
+        for (const [k, v] of Object.entries(updates)) {
+            await setSetting(k, String(v));
+        }
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en PATCH /settings:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
 app.get('/settings/serial-port', async (req, res) => {
     const cfg = await readConfig();
     res.json({ serialPort: cfg.serialPort });
@@ -515,6 +559,99 @@ app.delete('/users/:id', authenticateToken, async (req, res) => {
         console.error('Error en DELETE /users/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
     }
+});
+
+// --------- Backup de la base de datos ---------
+app.post('/backup', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const tempPath = path.join(os.tmpdir(), `edusec_backup_${ts}.db`);
+    try {
+        await fs.copyFile(DB_PATH, tempPath);
+        res.download(tempPath, `edusec_backup_${ts}.db`, err => {
+            fs.unlink(tempPath).catch(() => {});
+            if (err) console.error('Error enviando backup:', err);
+        });
+    } catch (err) {
+        console.error('Error en POST /backup:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Restaurar base de datos ---------
+app.post('/restore', authenticateToken, upload.single('backup'), async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    if (!req.file) {
+        return res.status(400).json({ msg: 'Archivo requerido' });
+    }
+    try {
+        const buf = await fs.readFile(req.file.path);
+        if (buf.slice(0, 16).toString() !== 'SQLite format 3\0') {
+            await fs.unlink(req.file.path);
+            return res.status(400).json({ msg: 'Archivo inválido' });
+        }
+        await closeDb();
+        await fs.copyFile(req.file.path, DB_PATH);
+        await fs.unlink(req.file.path);
+        const newDb = await openDb();
+        setDbInstance(newDb);
+        db = newDb;
+        res.json({ msg: 'Restaurado' });
+    } catch (err) {
+        console.error('Error en POST /restore:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Limpiar cache ---------
+app.post('/clear-cache', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    try {
+        await db.run('DELETE FROM logs');
+        await db.run('VACUUM');
+        res.json({ msg: 'ok' });
+    } catch (err) {
+        console.error('Error en POST /clear-cache:', err);
+        res.status(500).json({ msg: 'Error interno' });
+    }
+});
+
+// --------- Actualizar sistema ---------
+app.post('/system/update', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    exec('git pull', { cwd: path.join(__dirname, '..') }, (err, stdout, stderr) => {
+        if (err) {
+            console.error('Error en POST /system/update:', err);
+            return res.status(500).json({ msg: stderr || err.message });
+        }
+        res.json({ msg: stdout.trim() || 'Actualizado' });
+    });
+});
+
+// --------- Reiniciar módulos ---------
+app.post('/system/restart', authenticateToken, (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    res.json({ msg: 'Reiniciando...' });
+    setTimeout(() => {
+        const args = process.argv.slice(1);
+        const child = spawn(process.argv[0], args, {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'inherit'
+        });
+        child.unref();
+        process.exit(0);
+    }, 100);
 });
 
 // ———————— RUTA “Catch-all” para SPA ————————

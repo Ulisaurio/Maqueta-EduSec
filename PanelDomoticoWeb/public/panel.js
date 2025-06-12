@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const clockNow = document.getElementById("clockNow");
     const arduinoAlert = document.getElementById("arduinoAlert");
     const arduinoAlertClose = document.getElementById("arduinoAlertClose");
+    const restoreInput = document.getElementById("restoreFileInput");
 
     if (arduinoAlertClose) {
         arduinoAlertClose.onclick = () => arduinoAlert.classList.add('hidden');
@@ -372,11 +373,20 @@ document.addEventListener("DOMContentLoaded", () => {
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifAcc" class="focus-ring-primary">Habilitar Notificaciones de Acceso</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSec" class="focus-ring-primary">Habilitar Notificaciones de Seguridad</label>
                   <label class="flex items-center gap-2"><input type="checkbox" id="chkNotifSys" class="focus-ring-primary">Habilitar Notificaciones del Sistema</label>
-                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <fieldset class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
                     <div class="flex flex-wrap items-center gap-2">
                       <label for="serialPort" class="flex-1">Puerto Serie:</label>
                       <input id="serialPort" type="text" class="input-field w-40" />
                     </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="notifEmail" class="flex-1">Email para Notificaciones:</label>
+                      <input id="notifEmail" type="email" class="input-field flex-1 sm:w-60" />
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label for="backupFreq" class="flex-1">Frecuencia Auto-Backup (días):</label>
+                      <input id="backupFreq" type="number" class="input-field w-24" />
+                    </div>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                 </div>
@@ -471,7 +481,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (id === 'acceso') updateAccessTable(new Date().toISOString().substring(0, 10));
             if (id === 'estatus') startModuleMonitoring();
             if (id === 'monitoreo') startSecurityMonitoring();
-            if (id === 'config') loadSerialPort();
+            if (id === 'config') {
+                loadSerialPort();
+                applySettingsUI();
+            }
         }
 
 
@@ -1021,7 +1034,9 @@ const applyBtnStyle = () => {};
             updateBuzzerUI(false);
             renderSecurityLog();
             checkSensors();
-            monitorInterval = setInterval(checkSensors, 3000);
+            const sInt = parseInt(currentSettings.sensorInterval, 10);
+            const delay = (isFinite(sInt) && sInt > 0 ? sInt : 3) * 1000;
+            monitorInterval = setInterval(checkSensors, delay);
         }
         async function verifyModule(mod, btn, showChecking = true, showToast = true) {
             if (btn) {
@@ -1073,11 +1088,30 @@ const applyBtnStyle = () => {};
         let lastTempError = false;
         let systemArmed = false;
         let monitorInterval = null;
+        let sessionTimer = null;
         let buzzerTimeout = null;
         let lastPir = null;
         let lastDoorOpen = null;
         const securityLogs = [];
         let simulatedMode = true;
+        let currentSettings = {};
+
+        function resetSessionTimer() {
+            const mins = parseInt(currentSettings.sessionTimeout, 10);
+            if (!mins || mins <= 0) return;
+            clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                toast('Sesión finalizada por inactividad');
+                setTimeout(() => location.reload(), 500);
+            }, mins * 60 * 1000);
+        }
+
+        function initSessionTimeout() {
+            ['mousemove', 'keydown', 'click'].forEach(ev =>
+                document.addEventListener(ev, resetSessionTimer)
+            );
+            resetSessionTimer();
+        }
 
         const api = async (url, opts = {}) => {
             opts.headers = opts.headers || {};
@@ -1101,6 +1135,17 @@ const applyBtnStyle = () => {};
                 jwtToken = data.token;
                 currentUser = { username: data.username, role: data.role };
                 lblUser.textContent = data.username;
+                if (data.role === 'root') {
+                    try {
+                        currentSettings = await api('/settings');
+                    } catch {}
+                }
+                if (!currentSettings.sensorInterval) currentSettings.sensorInterval = '3';
+                if (!currentSettings.sessionTimeout) currentSettings.sessionTimeout = '15';
+                if (typeof currentSettings.simulatedMode === 'undefined') currentSettings.simulatedMode = 'true';
+                if (!currentSettings.notifEmail) currentSettings.notifEmail = '';
+                if (!currentSettings.backupFreq) currentSettings.backupFreq = '';
+                simulatedMode = /^(true|1)$/.test(currentSettings.simulatedMode);
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -1109,6 +1154,7 @@ const applyBtnStyle = () => {};
                     initMenu();
                     document.querySelector('#menu button').click();
                     startPolling();
+                    initSessionTimeout();
                     checkAllModules().then(updateModulesSummary);
                     api('/status/arduino').then(s => {
                         if (!s.available) {
@@ -1140,6 +1186,25 @@ const applyBtnStyle = () => {};
             } catch {
                 toast('Error cargando configuración');
             }
+        }
+
+        function applySettingsUI() {
+            const acc = document.getElementById('chkNotifAcc');
+            const sec = document.getElementById('chkNotifSec');
+            const sys = document.getElementById('chkNotifSys');
+            if (acc) acc.checked = /^(true|1)$/.test(currentSettings.notifAcc);
+            if (sec) sec.checked = /^(true|1)$/.test(currentSettings.notifSec);
+            if (sys) sys.checked = /^(true|1)$/.test(currentSettings.notifSys);
+            const email = document.getElementById('notifEmail');
+            if (email) email.value = currentSettings.notifEmail || '';
+            const bFreq = document.getElementById('backupFreq');
+            if (bFreq) bFreq.value = currentSettings.backupFreq || '';
+            const chkSim = document.getElementById('chkSimMode');
+            if (chkSim) chkSim.checked = /^(true|1)$/.test(currentSettings.simulatedMode);
+            const sInt = document.getElementById('sensorInterval');
+            if (sInt) sInt.value = currentSettings.sensorInterval || '';
+            const sTo = document.getElementById('sessionTimeout');
+            if (sTo) sTo.value = currentSettings.sessionTimeout || '';
         }
 
         function renderUsers(list) {
@@ -1282,21 +1347,104 @@ const applyBtnStyle = () => {};
                         return;
                     }
                 }
+
+                const emailVal = document.getElementById('notifEmail').value.trim();
+                if (emailVal && !/^\S+@\S+\.\S+$/.test(emailVal)) {
+                    toast('Correo inválido');
+                    return;
+                }
+
+                const prefs = {
+                    notifAcc: document.getElementById('chkNotifAcc').checked,
+                    notifSec: document.getElementById('chkNotifSec').checked,
+                    notifSys: document.getElementById('chkNotifSys').checked,
+                    notifEmail: emailVal,
+                    backupFreq: document.getElementById('backupFreq').value,
+                    simulatedMode: document.getElementById('chkSimMode').checked
+                };
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(prefs)
+                    });
+                    Object.assign(currentSettings, prefs);
+                    simulatedMode = !!prefs.simulatedMode;
+                } catch (err) {
+                    toast(err.message);
+                    return;
+                }
                 toast('Preferencias guardadas');
+                document.querySelector('#menu button[data-sec="config"]')?.click();
             } else if (e.target.closest('#backupBtn')) {
-                toast('Copia de seguridad creada');
+                try {
+                    const res = await fetch('/backup', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${jwtToken}` }
+                    });
+                    if (!res.ok) throw new Error('Error');
+                    const blob = await res.blob();
+                    const disp = res.headers.get('Content-Disposition') || '';
+                    const match = disp.match(/filename="([^\"]+)"/);
+                    const fname = match ? match[1] : 'backup.db';
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fname;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast('Copia de seguridad creada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#restoreBtn')) {
-                toast('Restaurando copia...');
+                restoreInput.click();
             } else if (e.target.closest('#clearCacheBtn')) {
-                toast('Caché limpiada');
+                try {
+                    await api('/clear-cache', { method: 'POST' });
+                    toast('Caché limpiada');
+                } catch (err) {
+                    toast(err.message);
+                }
             } else if (e.target.closest('#applySensorInterval')) {
-                toast('Intervalo aplicado');
+                const val = parseInt(document.getElementById('sensorInterval').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sensorInterval: val })
+                    });
+                    currentSettings.sensorInterval = String(val);
+                    if (monitorInterval) {
+                        clearInterval(monitorInterval);
+                        monitorInterval = setInterval(checkSensors, val * 1000);
+                    }
+                    toast('Intervalo aplicado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#applySessionTimeout')) {
-                toast('Tiempo de espera actualizado');
+                const val = parseInt(document.getElementById('sessionTimeout').value, 10);
+                if (!val || val <= 0) { toast('Valor inválido'); return; }
+                try {
+                    await api('/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionTimeout: val })
+                    });
+                    currentSettings.sessionTimeout = String(val);
+                    resetSessionTimer();
+                    toast('Tiempo de espera actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#updateBtn')) {
-                toast('Buscando actualizaciones...');
+                try {
+                    const data = await api('/system/update', { method: 'POST' });
+                    toast(data.msg || 'Actualizado');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#restartModulesBtn')) {
-                toast('Reiniciando módulos...');
+                try {
+                    const data = await api('/system/restart', { method: 'POST' });
+                    toast(data.msg || 'Reiniciando...');
+                } catch (err) { toast(err.message); }
             } else if (e.target.closest('#addHuellaBtn')) {
                 showEnrollModal();
             } else if (e.target.closest('#addRfidBtn')) {
@@ -1310,6 +1458,21 @@ const applyBtnStyle = () => {};
             document.body.classList.toggle('sidebar-collapsed');
             feather.replace();
         };
+
+        if (restoreInput) {
+            restoreInput.onchange = async () => {
+                if (!restoreInput.files.length) return;
+                const fd = new FormData();
+                fd.append('backup', restoreInput.files[0]);
+                try {
+                    await api('/restore', { method: 'POST', body: fd });
+                    toast('Copia restaurada');
+                } catch (err) {
+                    toast(err.message);
+                }
+                restoreInput.value = '';
+            };
+        }
 
         // Cerrar menúAcciones si clic afuera
         document.addEventListener('click', e => {

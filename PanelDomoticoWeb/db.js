@@ -3,20 +3,33 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
 
 // Resolver __dirname en ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+export const DB_PATH = path.join(__dirname, 'edusec.db');
 
 // Función para abrir la conexión
 export async function openDb() {
     return open({
-        filename: path.join(__dirname, 'edusec.db'),
+        filename: DB_PATH,
         driver: sqlite3.Database
     });
 }
 
 let dbInstance;
+
+export async function closeDb() {
+    if (dbInstance) {
+        await dbInstance.close();
+        dbInstance = null;
+    }
+}
+
+export function setDbInstance(db) {
+    dbInstance = db;
+}
 
 // Devuelve una instancia singleton de la base de datos
 export async function getDb() {
@@ -76,6 +89,14 @@ export async function initDb() {
       usuario_id INTEGER NOT NULL,
       creado DATETIME NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+    )
+  `);
+
+    // Tabla de ajustes generales
+    await db.exec(`
+    CREATE TABLE IF NOT EXISTS ajustes (
+      clave TEXT PRIMARY KEY,
+      valor TEXT
     )
   `);
 
@@ -171,4 +192,21 @@ export async function getRfidCards() {
 export async function deleteRfidCard(uid) {
     const db = await getDb();
     return db.run('DELETE FROM rfid_cards WHERE uid = ?', [uid]);
+}
+
+// ----- Ajustes generales -----
+
+export async function getSetting(clave) {
+    const db = await getDb();
+    const row = await db.get('SELECT valor FROM ajustes WHERE clave = ?', [clave]);
+    return row ? row.valor : null;
+}
+
+export async function setSetting(clave, valor) {
+    const db = await getDb();
+    return db.run(
+        `INSERT INTO ajustes (clave, valor) VALUES (?, ?)
+         ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+        [clave, valor]
+    );
 }
