@@ -39,6 +39,12 @@ function createPort(portPath) {
     port.on('error', err => {
         console.error('Error en el puerto serial:', err.message);
     });
+    port.on('close', () => {
+        port = null;
+        parser = null;
+        parserHooked = false;
+        arduinoAvailable = false;
+    });
     if (!parserHooked) {
         parser.on('data', d => serialEmitter.emit('message', d));
         parserHooked = true;
@@ -72,7 +78,7 @@ export default async function sendSerial(comando) {
             return `Arduino no disponible (${portPath})`;
         }
     }
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         // Inicializar puerto y parser si es necesario
         if (!port) {
             createPort(portPath);
@@ -97,16 +103,24 @@ export default async function sendSerial(comando) {
         };
 
         if (!port.isOpen) {
-            port.open(err => {
+            port.open(async err => {
                 if (err) {
                     arduinoAvailable = false;
                     parser.off('data', onData);
                     clearTimeout(timeoutId);
                     return resolve(`Error abriendo puerto: ${err.message}`);
                 }
+                if (!port || port.destroyed) {
+                    createPort(portPath);
+                }
+                await checkArduino();
                 writeCmd();
             });
         } else {
+            if (!port || port.destroyed) {
+                createPort(portPath);
+            }
+            await checkArduino();
             writeCmd();
         }
 
@@ -139,7 +153,7 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
             return `Arduino no disponible (${portPath})`;
         }
     }
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
         if (!port) {
             createPort(portPath);
         }
@@ -164,15 +178,23 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
             }
         };
         if (!port.isOpen) {
-            port.open(err => {
+            port.open(async err => {
                 if (err) {
                     arduinoAvailable = false;
                     cleanup();
                     return resolve(`Error abriendo puerto: ${err.message}`);
                 }
+                if (!port || port.destroyed) {
+                    createPort(portPath);
+                }
+                await checkArduino();
                 writeCmd();
             });
         } else {
+            if (!port || port.destroyed) {
+                createPort(portPath);
+            }
+            await checkArduino();
             writeCmd();
         }
         let lastLine = '';
