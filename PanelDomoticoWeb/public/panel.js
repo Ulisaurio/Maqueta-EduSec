@@ -715,11 +715,15 @@ const applyBtnStyle = () => {};
             try {
                 const data = await api('/comando/distancia');
                 const cm = parseNumber(data.resultado);
+                if (cm === null) {
+                    updateDoorUI(null);
+                    return;
+                }
                 const c = parseInt(currentSettings.doorClosedCm, 10);
                 const o = parseInt(currentSettings.doorOpenCm, 10);
                 let th = 10;
                 if (isFinite(c) && isFinite(o)) th = (c + o) / 2;
-                const open = cm !== null ? cm > th : false;
+                const open = cm > th;
                 updateDoorUI(open);
                 updateDoor(open ? '🔓 Abierta' : '🔒 Cerrada');
             } catch (err) {
