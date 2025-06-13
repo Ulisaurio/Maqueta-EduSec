@@ -118,6 +118,30 @@ serialEmitter.on('message', async msg => {
     }
 });
 
+serialEmitter.on('message', async msg => {
+    const m = /Huella\s+valida\s*ID:\s*(\d+)/i.exec(msg);
+    if (!m) return;
+    const fid = parseInt(m[1], 10);
+    try {
+        const row = await db.get('SELECT usuario_id FROM huellas WHERE huella_id = ?', [fid]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [row ? row.usuario_id : null, 'huella', `id:${fid}`]
+        );
+        if (row && systemArmed) {
+            systemArmed = false;
+            await writeConfig({ systemArmed });
+            try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
+            await db.run(
+                `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
+            );
+        }
+    } catch (err) {
+        console.error('Error manejando huella:', err);
+    }
+});
+
 // ———————— AUTENTICACIÓN JWT ————————
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
