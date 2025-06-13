@@ -964,7 +964,7 @@ const applyBtnStyle = () => {};
             'Buzzer': 'buzzer_status',
             'Huella Digital': 'huella',
             'Sensor Temp': 'leertemp',
-            'RGB LED': 'rgb_off'
+            'RGB LED': () => systemArmed ? 'rgb_red' : 'rgb_green'
         };
 
         let moduleInterval;
@@ -1266,8 +1266,9 @@ const applyBtnStyle = () => {};
                 btn.innerHTML = '<span class="spinner"></span>';
             }
             const accion = moduleActions[mod];
+            let cmdName = typeof accion === 'function' ? accion() : accion;
             try {
-                if (!accion) throw new Error('No soportado');
+                if (!cmdName) throw new Error('No soportado');
                 moduleStatus[mod] = null;
                 const card = document.querySelector(`.module-card[data-module="${mod}"]`);
                 const span = card ? card.querySelector('[data-status]') : null;
@@ -1280,13 +1281,13 @@ const applyBtnStyle = () => {};
                     await delay(2000);
                 }
                 let ok = false;
-                if (accion === 'arduino_status') {
+                if (cmdName === 'arduino_status') {
                     const data = await api('/status/arduino');
                     ok = !!data.available;
                     updateArduinoAlert(ok);
                     if (showToast) toast(`Arduino: ${ok ? 'Disponible' : 'No disponible'}`);
                 } else {
-                    const data = await api(`/comando/${accion}`);
+                    const data = await api(`/comando/${cmdName}`);
                     if (showToast) toast(`Resultado de ${mod}: ${data.resultado}`);
                     ok = resultIsOk(data.resultado);
                 }
