@@ -1145,17 +1145,17 @@ const applyBtnStyle = () => {};
                 if (!uid) return;
                 addSecurityLog(`RFID: ${uid}`);
                 const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
-                if (systemArmed && val) {
+                if (val) {
                     try {
                         await api('/system-state', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ armed: false })
+                            body: JSON.stringify({ armed: !systemArmed })
                         });
-                        systemArmed = false;
+                        systemArmed = !systemArmed;
                         updateSystemStateUI();
-                        addSecurityLog('Sistema desarmado por RFID');
-                        cmd('abrir');
+                        addSecurityLog(`Sistema ${systemArmed ? 'armado' : 'desarmado'} por RFID`);
+                        if (!systemArmed) cmd('abrir');
                     } catch {}
                 }
             };

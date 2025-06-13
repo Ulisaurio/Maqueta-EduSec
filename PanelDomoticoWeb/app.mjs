@@ -69,15 +69,25 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'rfid', uid]
         );
-        if (row && systemArmed) {
-            systemArmed = false;
-            await writeConfig({ systemArmed });
-            try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
-            await db.run(
-                `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                [row.usuario_id, 'system_state', 'disarmed by rfid']
-            );
-            sendSerial('abrir').catch(() => {});
+        if (row) {
+            if (systemArmed) {
+                systemArmed = false;
+                await writeConfig({ systemArmed });
+                try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
+                await db.run(
+                    `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                    [row.usuario_id, 'system_state', 'disarmed by rfid']
+                );
+                sendSerial('abrir').catch(() => {});
+            } else {
+                systemArmed = true;
+                await writeConfig({ systemArmed });
+                try { await rgbRedCmd(); } catch (e) { console.error('LED RGB:', e); }
+                await db.run(
+                    `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                    [row.usuario_id, 'system_state', 'armed by rfid']
+                );
+            }
         }
     } catch (err) {
         console.error('Error manejando UID:', err);

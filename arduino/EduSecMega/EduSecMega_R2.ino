@@ -98,10 +98,14 @@ long readDistance(){
 
 void alarm(){
   for(uint8_t i=0;i<3;i++){
+    setRGB(255,0,0);        // flash red with the buzzer
     tone(BUZZER_PIN, 2000, 150);
+    delay(150);
+    rgbOff();
     delay(200);
   }
   noTone(BUZZER_PIN);
+  setRGB(255,0,0);         // return to armed indication
 }
 
 uint8_t enrollFinger(uint8_t id){
