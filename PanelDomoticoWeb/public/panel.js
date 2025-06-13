@@ -1141,22 +1141,28 @@ const applyBtnStyle = () => {};
             rfidEvt = new EventSource('/serial-events');
             rfidEvt.onmessage = async e => {
                 const m = /UID:\s*([A-F0-9:]+)/i.exec(e.data || '');
-                const uid = m ? m[1].toUpperCase() : null;
-                if (!uid) return;
-                addSecurityLog(`RFID: ${uid}`);
-                const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
-                if (systemArmed && val) {
-                    try {
-                        await api('/system-state', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ armed: false })
-                        });
-                        systemArmed = false;
-                        updateSystemStateUI();
-                        addSecurityLog('Sistema desarmado por RFID');
-                        cmd('abrir');
-                    } catch {}
+                if (m) {
+                    const uid = m[1].toUpperCase();
+                    addSecurityLog(`RFID: ${uid}`);
+                    const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                    if (systemArmed && val) {
+                        try {
+                            await api('/system-state', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ armed: false })
+                            });
+                            systemArmed = false;
+                            updateSystemStateUI();
+                            addSecurityLog('Sistema desarmado por RFID');
+                            cmd('abrir');
+                        } catch {}
+                    }
+                    return;
+                }
+                const fm = /(Huella\s+(v\u00e1lida|no\s+v\u00e1lida))/i.exec(e.data || '');
+                if (fm) {
+                    addSecurityLog(fm[1]);
                 }
             };
             try {
