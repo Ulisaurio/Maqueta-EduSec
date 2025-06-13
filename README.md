@@ -44,6 +44,19 @@ The `arduino/` directory contains the sketches that run on the microcontroller.
 `arduino/EduSecMega` is the unified sketch for an Arduino Mega. Consult the
 respective `README.md` files for pin mapping and library requirements.
 Currently `arduino/EduSecMega/EduSecMega_R2.ino` is the recommended firmware and the version deployed on the demo panel. The previous `EduSecMega.ino` file is kept for reference.
+The fingerprint reader now scans continuously. When a stored fingerprint is recognized the door relay opens for about five seconds and then closes again. Each successful match is reported over serial as `Huella valida ID:<n>` so the backend can log the event.
+
+
+## Access System
+
+The RGB LED acts as the system status indicator:
+
+- **Green** – system disarmed
+- **Red** – system armed
+
+When armed, any motion detected by the PIR sensor or a door opening via the distance sensor triggers the alarm. During the alarm the LED flashes red, then returns to solid red once the buzzer stops.
+
+The system can be armed or disarmed either from the dashboard or by presenting a valid RFID card. Swiping a card while disarmed arms the system (LED turns red). Swiping again disarms it and automatically opens the main door.
 
 ### Fingerprint Access
 
