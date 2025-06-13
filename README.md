@@ -61,6 +61,10 @@ The system can be armed or disarmed either from the dashboard or by presenting a
 
 The `huella` command triggers a fingerprint check on the Arduino. If a valid finger is detected the relay opens for about five seconds and a message is printed to the serial port so the backend can log the event. Manual commands from the dashboard still work normally and keep the door open or closed until changed or a fingerprint is read.
 
+### Sensor Demo Mode
+
+Enable **Modo Demo Sensores** from the configuration screen to bypass stored credentials. When active, any RFID card read or fingerprint detected is treated as valid, allowing quick demonstrations even if enrollment fails.
+
 ### Assets Notice
 The logo file `logo_edusec.png` is not included in this repository.
 After cloning the project, manually copy it into:
