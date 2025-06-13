@@ -225,7 +225,7 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
     }
     try {
         const id = req.query.id ? parseInt(req.query.id, 10) : undefined;
-        const resultado = await fn(id);
+        let resultado = await fn(id);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle)
          VALUES (?, ?, ?)`,
@@ -235,6 +235,11 @@ app.get('/comando/:accion', authenticateToken, async (req, res) => {
             await addHuella({ usuario_id: req.user.id, huella_id: id });
         } else if (accion === 'borrar' && typeof id !== 'undefined') {
             await deleteHuella(id);
+        } else if (accion === 'huella' && /válida/i.test(resultado)) {
+            sendSerial('abrir').catch(() => {});
+            setTimeout(() => {
+                sendSerial('cerrar').catch(() => {});
+            }, 5000);
         }
         return res.json({ accion, resultado });
     } catch (err) {

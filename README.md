@@ -45,6 +45,10 @@ The `arduino/` directory contains the sketches that run on the microcontroller.
 respective `README.md` files for pin mapping and library requirements.
 Currently `arduino/EduSecMega/EduSecMega_R2.ino` is the recommended firmware and the version deployed on the demo panel. The previous `EduSecMega.ino` file is kept for reference.
 
+### Fingerprint Access
+
+The `huella` command triggers a fingerprint check on the Arduino. If a valid finger is detected the relay is opened for around five seconds and a message is printed to the serial port. The backend waits for this response, logs it and also issues `abrir` followed by `cerrar` as a backup.
+
 ### Assets Notice
 The logo file `logo_edusec.png` is not included in this repository.
 After cloning the project, manually copy it into:

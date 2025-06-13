@@ -159,9 +159,17 @@ void loop(){
     }
   }
   else if(hasCmd && strcmp(cmd,"huella")==0){
-    if(!fingerPresent) Serial.println(F("Sensor de huella no disponible"));
-    else if(verifyFinger()) Serial.println(F("Huella válida"));
-    else Serial.println(F("Huella no válida"));
+    if(!fingerPresent){
+      Serial.println(F("Sensor de huella no disponible"));
+    } else if(verifyFinger()){
+      Serial.println(F("Huella válida - abriendo relé"));
+      digitalWrite(RELAY_PIN, LOW);
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println(F("Relé cerrado"));
+    } else {
+      Serial.println(F("Huella no válida"));
+    }
   }
   else if(hasCmd && strcmp(cmd,"distancia")==0){
     long d = readDistance();
