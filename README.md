@@ -67,3 +67,30 @@ After cloning the project, manually copy it into:
 `PanelDomoticoWeb/public/img/`
 - The SQLite database now stores timestamps in local time.
 
+
+## Credential Enrollment
+
+### Enroll a fingerprint
+1. Log in as a **root** user and open **Acceso principal**.
+2. Click **Administrar Huellas** then **Agregar Nueva Huella**.
+3. Select the account and fill in the name fields.
+4. Follow the on-screen prompts. The Arduino typically prints:
+   ```
+   Coloca el dedo...
+   Retira el dedo
+   Coloca el mismo dedo de nuevo...
+   Huella enrolada
+   ```
+   If the sensor is missing you will see `Sensor de huella no disponible`.
+
+### Register an RFID card
+1. In the **Monitoreo** section choose **Administrar Tarjetas** and press **Agregar Nueva Tarjeta**.
+2. Present the card when prompted. The firmware responds with `UID: XX:YY:ZZ` or `RFID no disponible`.
+3. Pick the user and save. Duplicate cards cause a "Tarjeta ya registrada" error.
+
+### Troubleshooting
+- Ensure the fingerprint sensor and RFID reader are wired and powered correctly. Missing modules trigger the messages above.
+- Remove unwanted or duplicate entries from the SQLite database at `PanelDomoticoWeb/edusec.db`.
+- Place your custom logo at `PanelDomoticoWeb/public/img/logo_edusec.png` so the login screen displays it.
+
+The application uses a SQLite database stored in `PanelDomoticoWeb/edusec.db`.
