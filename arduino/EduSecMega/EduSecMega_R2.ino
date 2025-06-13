@@ -98,10 +98,14 @@ long readDistance(){
 
 void alarm(){
   for(uint8_t i=0;i<3;i++){
+    setRGB(255,0,0);        // flash red with the buzzer
     tone(BUZZER_PIN, 2000, 150);
+    delay(150);
+    rgbOff();
     delay(200);
   }
   noTone(BUZZER_PIN);
+  setRGB(255,0,0);         // return to armed indication
 }
 
 uint8_t enrollFinger(uint8_t id){
@@ -159,9 +163,17 @@ void loop(){
     }
   }
   else if(hasCmd && strcmp(cmd,"huella")==0){
-    if(!fingerPresent) Serial.println(F("Sensor de huella no disponible"));
-    else if(verifyFinger()) Serial.println(F("Huella válida"));
-    else Serial.println(F("Huella no válida"));
+    if(!fingerPresent){
+      Serial.println(F("Sensor de huella no disponible"));
+    } else if(verifyFinger()){
+      Serial.println(F("Huella válida - abriendo relé"));
+      digitalWrite(RELAY_PIN, LOW);
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println(F("Relé cerrado"));
+    } else {
+      Serial.println(F("Huella no válida"));
+    }
   }
   else if(hasCmd && strcmp(cmd,"distancia")==0){
     long d = readDistance();

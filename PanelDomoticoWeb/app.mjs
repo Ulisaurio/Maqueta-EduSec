@@ -69,18 +69,76 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'rfid', uid]
         );
+        if (row) {
+            if (systemArmed) {
+                systemArmed = false;
+                await writeConfig({ systemArmed });
+                try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
+                await db.run(
+                    `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                    [row.usuario_id, 'system_state', 'disarmed by rfid']
+                );
+                sendSerial('abrir').catch(() => {});
+            } else {
+                systemArmed = true;
+                await writeConfig({ systemArmed });
+                try { await rgbRedCmd(); } catch (e) { console.error('LED RGB:', e); }
+                await db.run(
+                    `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                    [row.usuario_id, 'system_state', 'armed by rfid']
+                );
+            }
+        }
+    } catch (err) {
+        console.error('Error manejando UID:', err);
+    }
+});
+
+serialEmitter.on('message', async msg => {
+    const m = /Huella\s+valida\s*ID:\s*(\d+)/i.exec(msg);
+    if (!m) return;
+    const fid = parseInt(m[1], 10);
+    try {
+        const row = await db.get('SELECT usuario_id FROM huellas WHERE huella_id = ?', [fid]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [row ? row.usuario_id : null, 'huella', `id:${fid}`]
+        );
         if (row && systemArmed) {
             systemArmed = false;
             await writeConfig({ systemArmed });
             try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
             await db.run(
                 `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                [row.usuario_id, 'system_state', 'disarmed by rfid']
+                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
             );
-            sendSerial('abrir').catch(() => {});
         }
     } catch (err) {
-        console.error('Error manejando UID:', err);
+        console.error('Error manejando huella:', err);
+    }
+});
+
+serialEmitter.on('message', async msg => {
+    const m = /Huella\s+valida\s*ID:\s*(\d+)/i.exec(msg);
+    if (!m) return;
+    const fid = parseInt(m[1], 10);
+    try {
+        const row = await db.get('SELECT usuario_id FROM huellas WHERE huella_id = ?', [fid]);
+        await db.run(
+            `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+            [row ? row.usuario_id : null, 'huella', `id:${fid}`]
+        );
+        if (row && systemArmed) {
+            systemArmed = false;
+            await writeConfig({ systemArmed });
+            try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
+            await db.run(
+                `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
+                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
+            );
+        }
+    } catch (err) {
+        console.error('Error manejando huella:', err);
     }
 });
 
@@ -300,18 +358,31 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     const fn = accionesMap['enrolar'];
     if (!fn) return res.status(500).json({ msg: 'Comando no soportado' });
     try {
-        const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
-        const nextId = (row && row.max ? row.max : 0) + 1;
-        const resp = await sendSerialStream(`enrolar ${nextId}`);
+        const row = await db.get(
+            'SELECT MAX(CAST(huella_id AS INTEGER)) AS max FROM huellas'
+        );
+        const maxId = row && row.max ? Number(row.max) : 0;
+        const nextId = maxId + 1;
+        const resp = await sendSerialStream(
+            `enrolar ${nextId}`,
+            /(enrolada|error|no disponible)/i
+        );
         const ok = /enrolada/i.test(resp);
+        const noSensor = /sensor de huella no disponible/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [req.user.id, ok ? 'enrolar' : 'enrolar_error', resp]
         );
+        if (noSensor) {
+            return res.status(500).json({ msg: resp });
+        }
         if (!ok) {
             return res.status(500).json({ msg: resp });
         }
-        await db.run('INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)', [usuario_id, nextId, nombre, apellido_pat, apellido_mat]);
+        await db.run(
+            'INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, CAST(? AS INTEGER), ?, ?, ?)',
+            [usuario_id, nextId, nombre, apellido_pat, apellido_mat]
+        );
         res.json({ huella_id: nextId, usuario_id, nombre, apellido_pat, apellido_mat });
     } catch (err) {
         console.error('Error en POST /huellas:', err);
@@ -324,12 +395,17 @@ app.delete('/huellas/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         const resp = await sendSerial(`borrar ${id}`);
-        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+        const ok = /Huella borrada/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
+            [req.user.id, ok ? 'borrar' : 'borrar_error', `huella:${id} => ${resp}`]
         );
-        return res.json({ msg: resp });
+        if (ok) {
+            await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+            return res.json({ msg: resp });
+        } else {
+            return res.status(500).json({ msg: resp });
+        }
     } catch (err) {
         console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
