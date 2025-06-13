@@ -79,7 +79,6 @@ serialEmitter.on('message', async msg => {
                     `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
                     [row ? row.usuario_id : null, 'system_state', 'disarmed by rfid']
                 );
-                sendSerial('abrir').catch(() => {});
             } else {
                 systemArmed = true;
                 await writeConfig({ systemArmed });
@@ -532,6 +531,26 @@ app.post('/settings/serial-port', async (req, res) => {
     if (!serialPort) return res.status(400).json({ msg: 'serialPort requerido' });
     await writeConfig({ serialPort });
     res.json({ msg: 'ok' });
+});
+
+// --------- Calibración del sensor de puerta ---------
+app.post('/calibrate/door', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'root') {
+        return res.status(403).json({ msg: 'Acceso denegado: solo root' });
+    }
+    const samples = Math.max(1, parseInt(req.body?.samples || 5, 10));
+    const readings = [];
+    for (let i = 0; i < samples; i++) {
+        const resp = await sendSerial('distancia');
+        const m = /([-+]?\d+(?:\.\d+)?)/.exec(resp);
+        if (m) readings.push(parseFloat(m[1]));
+        await new Promise(res => setTimeout(res, 200));
+    }
+    if (!readings.length) {
+        return res.status(500).json({ msg: 'Lecturas no válidas' });
+    }
+    const avg = readings.reduce((a, b) => a + b, 0) / readings.length;
+    res.json({ cm: Math.round(avg) });
 });
 
 // ———————— CRUD DE USUARIOS (/users) ————————

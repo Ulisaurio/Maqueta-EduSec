@@ -443,6 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <label class="flex items-center gap-2"><input type="checkbox" id="chkDemoSens" class="focus-ring-primary">Modo Demo Sensores</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
+                  <button id="doorCalBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="crosshair"></i>Calibrar Sensor</button>
                   </div>
                 </div>
 
@@ -714,7 +715,11 @@ const applyBtnStyle = () => {};
             try {
                 const data = await api('/comando/distancia');
                 const cm = parseNumber(data.resultado);
-                const open = cm !== null ? cm > 10 : false;
+                const c = parseInt(currentSettings.doorClosedCm, 10);
+                const o = parseInt(currentSettings.doorOpenCm, 10);
+                let th = 10;
+                if (isFinite(c) && isFinite(o)) th = (c + o) / 2;
+                const open = cm !== null ? cm > th : false;
                 updateDoorUI(open);
                 updateDoor(open ? '🔓 Abierta' : '🔒 Cerrada');
             } catch (err) {
@@ -965,6 +970,81 @@ const applyBtnStyle = () => {};
         let moduleInterval;
         const delay = ms => new Promise(res => setTimeout(res, ms));
 
+        async function measureDoor() {
+            const data = await api('/calibrate/door', { method: 'POST' });
+            return data.cm;
+        }
+
+        function calibrateDoor() {
+            const modal = document.createElement('div');
+            modal.id = 'doorCalModal';
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+              <div class="bg-white dark:bg-slate-800 rounded p-4 space-y-4 w-72 text-center">
+                <h4 class="font-bold">Calibración Sensor Puerta</h4>
+                <p id="doorCalMsg" class="text-sm">Cierre la puerta y pulse Medir</p>
+                <div class="flex justify-end gap-2">
+                  <button id="doorCalCancel" class="btn btn-sm bg-slate-500 hover:bg-slate-600">Cancelar</button>
+                  <button id="doorCalNext" class="btn btn-sm">Medir</button>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            feather.replace();
+
+            const msgEl = modal.querySelector('#doorCalMsg');
+            const cancelBtn = modal.querySelector('#doorCalCancel');
+            const nextBtn = modal.querySelector('#doorCalNext');
+            const steps = [
+                'Cierre la puerta y pulse Medir',
+                'Abra la puerta y pulse Medir',
+                'Cierre la puerta nuevamente y pulse Medir'
+            ];
+            const results = [];
+            let step = 0;
+
+            cancelBtn.onclick = () => modal.remove();
+
+            nextBtn.onclick = async () => {
+                nextBtn.disabled = true;
+                msgEl.textContent = 'Midiendo...';
+                try {
+                    const cm = await measureDoor();
+                    results.push(cm);
+                    msgEl.textContent = `Distancia: ${cm} cm`;
+                } catch (err) {
+                    msgEl.textContent = err.message;
+                    nextBtn.disabled = false;
+                    return;
+                }
+                step++;
+                if (step < steps.length) {
+                    setTimeout(() => {
+                        msgEl.textContent = steps[step];
+                        nextBtn.disabled = false;
+                    }, 1000);
+                } else {
+                    const closedCm = Math.round((results[0] + results[2]) / 2);
+                    const openCm = Math.round(results[1]);
+                    try {
+                        await api('/settings', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ doorClosedCm: closedCm, doorOpenCm: openCm })
+                        });
+                        currentSettings.doorClosedCm = String(closedCm);
+                        currentSettings.doorOpenCm = String(openCm);
+                        toast('Calibración guardada');
+                    } catch (err) {
+                        toast(err.message);
+                    }
+                    msgEl.textContent = `Listo. Cerrada: ${closedCm} cm, Abierta: ${openCm} cm`;
+                    nextBtn.textContent = 'Cerrar';
+                    nextBtn.disabled = false;
+                    nextBtn.onclick = () => modal.remove();
+                }
+            };
+        }
+
         function setCheckingStatuses() {
             document.querySelectorAll('.module-card').forEach(card => {
                 const span = card.querySelector('[data-status]');
@@ -1121,7 +1201,11 @@ const applyBtnStyle = () => {};
                 const distData = await api('/comando/distancia');
                 const n = /([-+]?\d+(?:\.\d+)?)/.exec(distData.resultado || '');
                 const cm = n ? parseFloat(n[1]) : null;
-                const open = cm !== null ? cm > 10 : false;
+                const c = parseInt(currentSettings.doorClosedCm, 10);
+                const o = parseInt(currentSettings.doorOpenCm, 10);
+                let th = 10;
+                if (isFinite(c) && isFinite(o)) th = (c + o) / 2;
+                const open = cm !== null ? cm > th : false;
                 updateDoorUI(open);
                 if (lastDoorOpen !== null && open !== lastDoorOpen) {
                     addSecurityLog(`Ultrasonido: ${open ? 'Puerta Abierta' : 'Puerta Cerrada'}`);
@@ -1159,7 +1243,6 @@ const applyBtnStyle = () => {};
                         systemArmed = !systemArmed;
                         updateSystemStateUI();
                         addSecurityLog(`Sistema ${systemArmed ? 'armado' : 'desarmado'} por RFID`);
-                        if (!systemArmed) cmd('abrir');
                     } catch {}
                 }
             };
@@ -1303,6 +1386,8 @@ const applyBtnStyle = () => {};
                 }
                 if (!currentSettings.sensorInterval) currentSettings.sensorInterval = '3';
                 if (!currentSettings.sessionTimeout) currentSettings.sessionTimeout = '15';
+                if (!currentSettings.doorClosedCm) currentSettings.doorClosedCm = '5';
+                if (!currentSettings.doorOpenCm) currentSettings.doorOpenCm = '15';
                 if (typeof currentSettings.simulatedMode === 'undefined') currentSettings.simulatedMode = 'true';
                 if (!currentSettings.notifEmail) currentSettings.notifEmail = '';
                 if (!currentSettings.backupFreq) currentSettings.backupFreq = '';
@@ -1620,6 +1705,8 @@ const applyBtnStyle = () => {};
                 showEnrollModal();
             } else if (e.target.closest('#addRfidBtn')) {
                 showRfidModal();
+            } else if (e.target.closest('#doorCalBtn')) {
+                calibrateDoor();
             }
         });
 
@@ -1668,6 +1755,7 @@ const applyBtnStyle = () => {};
         window.verifyModule = verifyModule;
         window.showEnrollModal = showEnrollModal;
         window.showRfidModal = showRfidModal;
+        window.calibrateDoor = calibrateDoor;
 
         // Inicializar Feather Icons
         feather.replace();

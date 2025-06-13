@@ -55,7 +55,7 @@ The RGB LED acts as the system status indicator:
 
 When armed, any motion detected by the PIR sensor or a door opening via the distance sensor triggers the alarm. During the alarm the LED flashes red, then returns to solid red once the buzzer stops.
 
-The system can be armed or disarmed either from the dashboard or by presenting a valid RFID card. Swiping a card while disarmed arms the system (LED turns red). Swiping again disarms it and automatically opens the main door.
+The system can be armed or disarmed either from the dashboard or by presenting a valid RFID card. Swiping a card while disarmed arms the system (LED turns red). Swiping again disarms it without opening the door.
 
 ### Fingerprint Access
 
@@ -64,6 +64,10 @@ The `huella` command triggers a fingerprint check on the Arduino. If a valid fin
 ### Sensor Demo Mode
 
 Enable **Modo Demo Sensores** from the configuration screen to bypass stored credentials. When active, any RFID card read or fingerprint detected is treated as valid, allowing quick demonstrations even if enrollment fails.
+
+### Door Sensor Calibration
+
+Root users can calibrate the ultrasonic door sensor from the settings panel. The wizard measures the distance with the door closed, open and closed again, averages the readings to the nearest centimeter and stores them as the open and closed thresholds. These values replace the fixed 10 cm limit used by the UI.
 
 ### Assets Notice
 The logo file `logo_edusec.png` is not included in this repository.
