@@ -49,6 +49,7 @@ await initDb();      // Crea tablas y usuario admin si es necesario
 db = await getDb();  // Obtener instancia “promisificada” de la BD
 const cfg = await readConfig();
 let systemArmed = !!cfg.systemArmed;
+let sensorDemoMode = /^(true|1)$/i.test(await getSetting('sensorDemoMode') || 'false');
 try {
     if (systemArmed) {
         await rgbRedCmd();
@@ -69,14 +70,14 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'rfid', uid]
         );
-        if (row) {
+        if (row || sensorDemoMode) {
             if (systemArmed) {
                 systemArmed = false;
                 await writeConfig({ systemArmed });
                 try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
                 await db.run(
                     `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                    [row.usuario_id, 'system_state', 'disarmed by rfid']
+                    [row ? row.usuario_id : null, 'system_state', 'disarmed by rfid']
                 );
                 sendSerial('abrir').catch(() => {});
             } else {
@@ -85,7 +86,7 @@ serialEmitter.on('message', async msg => {
                 try { await rgbRedCmd(); } catch (e) { console.error('LED RGB:', e); }
                 await db.run(
                     `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                    [row.usuario_id, 'system_state', 'armed by rfid']
+                    [row ? row.usuario_id : null, 'system_state', 'armed by rfid']
                 );
             }
         }
@@ -104,13 +105,13 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'huella', `id:${fid}`]
         );
-        if (row && systemArmed) {
+        if ((row || sensorDemoMode) && systemArmed) {
             systemArmed = false;
             await writeConfig({ systemArmed });
             try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
             await db.run(
                 `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
+                [row ? row.usuario_id : null, 'system_state', 'disarmed by fingerprint']
             );
         }
     } catch (err) {
@@ -128,13 +129,13 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'huella', `id:${fid}`]
         );
-        if (row && systemArmed) {
+        if ((row || sensorDemoMode) && systemArmed) {
             systemArmed = false;
             await writeConfig({ systemArmed });
             try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
             await db.run(
                 `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
+                [row ? row.usuario_id : null, 'system_state', 'disarmed by fingerprint']
             );
         }
     } catch (err) {
@@ -152,13 +153,13 @@ serialEmitter.on('message', async msg => {
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [row ? row.usuario_id : null, 'huella', `id:${fid}`]
         );
-        if (row && systemArmed) {
+        if ((row || sensorDemoMode) && systemArmed) {
             systemArmed = false;
             await writeConfig({ systemArmed });
             try { await rgbGreenCmd(); } catch (e) { console.error('LED RGB:', e); }
             await db.run(
                 `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-                [row.usuario_id, 'system_state', 'disarmed by fingerprint']
+                [row ? row.usuario_id : null, 'system_state', 'disarmed by fingerprint']
             );
         }
     } catch (err) {
@@ -558,6 +559,9 @@ app.patch('/settings', authenticateToken, async (req, res) => {
     try {
         for (const [k, v] of Object.entries(updates)) {
             await setSetting(k, String(v));
+            if (k === 'sensorDemoMode') {
+                sensorDemoMode = /^(true|1)$/i.test(String(v));
+            }
         }
         res.json({ msg: 'ok' });
     } catch (err) {

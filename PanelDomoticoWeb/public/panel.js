@@ -440,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
                       <input id="backupFreq" type="number" class="input-field w-24" />
                     </div>
                     <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkDemoSens" class="focus-ring-primary">Modo Demo Sensores</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
                   </div>
@@ -1144,7 +1145,10 @@ const applyBtnStyle = () => {};
                 const uid = m ? m[1].toUpperCase() : null;
                 if (!uid) return;
                 addSecurityLog(`RFID: ${uid}`);
-                const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                let val = true;
+                if (!/^(true|1)$/.test(currentSettings.sensorDemoMode)) {
+                    val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                }
                 if (val) {
                     try {
                         await api('/system-state', {
@@ -1250,6 +1254,7 @@ const applyBtnStyle = () => {};
         let lastDoorOpen = null;
         const securityLogs = [];
         let simulatedMode = true;
+        let sensorDemoMode = false;
         let currentSettings = {};
 
         function resetSessionTimer() {
@@ -1301,7 +1306,9 @@ const applyBtnStyle = () => {};
                 if (typeof currentSettings.simulatedMode === 'undefined') currentSettings.simulatedMode = 'true';
                 if (!currentSettings.notifEmail) currentSettings.notifEmail = '';
                 if (!currentSettings.backupFreq) currentSettings.backupFreq = '';
+                if (typeof currentSettings.sensorDemoMode === 'undefined') currentSettings.sensorDemoMode = 'false';
                 simulatedMode = /^(true|1)$/.test(currentSettings.simulatedMode);
+                sensorDemoMode = /^(true|1)$/.test(currentSettings.sensorDemoMode);
                 loadingOverlay.classList.remove('hidden');
                 setTimeout(() => {
                     loginCard.classList.add('hidden');
@@ -1359,6 +1366,8 @@ const applyBtnStyle = () => {};
             if (bFreq) bFreq.value = currentSettings.backupFreq || '';
             const chkSim = document.getElementById('chkSimMode');
             if (chkSim) chkSim.checked = /^(true|1)$/.test(currentSettings.simulatedMode);
+            const chkDemo = document.getElementById('chkDemoSens');
+            if (chkDemo) chkDemo.checked = /^(true|1)$/.test(currentSettings.sensorDemoMode);
             const sInt = document.getElementById('sensorInterval');
             if (sInt) sInt.value = currentSettings.sensorInterval || '';
             const sTo = document.getElementById('sessionTimeout');
@@ -1519,7 +1528,8 @@ const applyBtnStyle = () => {};
                     notifSys: document.getElementById('chkNotifSys').checked,
                     notifEmail: emailVal,
                     backupFreq: document.getElementById('backupFreq').value,
-                    simulatedMode: document.getElementById('chkSimMode').checked
+                    simulatedMode: document.getElementById('chkSimMode').checked,
+                    sensorDemoMode: document.getElementById('chkDemoSens').checked
                 };
                 try {
                     await api('/settings', {
@@ -1529,6 +1539,8 @@ const applyBtnStyle = () => {};
                     });
                     Object.assign(currentSettings, prefs);
                     simulatedMode = !!prefs.simulatedMode;
+                    currentSettings.sensorDemoMode = prefs.sensorDemoMode ? 'true' : 'false';
+                    sensorDemoMode = !!prefs.sensorDemoMode;
                 } catch (err) {
                     toast(err.message);
                     return;
