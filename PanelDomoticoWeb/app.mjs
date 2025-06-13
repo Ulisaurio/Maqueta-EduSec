@@ -50,6 +50,15 @@ db = await getDb();  // Obtener instancia “promisificada” de la BD
 const cfg = await readConfig();
 let systemArmed = !!cfg.systemArmed;
 let sensorDemoMode = /^(true|1)$/i.test(await getSetting('sensorDemoMode') || 'false');
+try {
+    if (sensorDemoMode) {
+        await sendSerial('demo 1');
+    } else {
+        await sendSerial('demo 0');
+    }
+} catch (err) {
+    console.error('Error inicializando modo demo:', err);
+}
 let lastRfidUid = null;
 let lastRfidTime = 0;
 try {
