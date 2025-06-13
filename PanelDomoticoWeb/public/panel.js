@@ -1159,7 +1159,6 @@ const applyBtnStyle = () => {};
                         systemArmed = !systemArmed;
                         updateSystemStateUI();
                         addSecurityLog(`Sistema ${systemArmed ? 'armado' : 'desarmado'} por RFID`);
-                        if (!systemArmed) cmd('abrir');
                     } catch {}
                 }
             };

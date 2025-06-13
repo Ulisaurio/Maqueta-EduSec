@@ -79,7 +79,6 @@ serialEmitter.on('message', async msg => {
                     `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
                     [row ? row.usuario_id : null, 'system_state', 'disarmed by rfid']
                 );
-                sendSerial('abrir').catch(() => {});
             } else {
                 systemArmed = true;
                 await writeConfig({ systemArmed });

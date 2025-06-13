@@ -55,7 +55,7 @@ The RGB LED acts as the system status indicator:
 
 When armed, any motion detected by the PIR sensor or a door opening via the distance sensor triggers the alarm. During the alarm the LED flashes red, then returns to solid red once the buzzer stops.
 
-The system can be armed or disarmed either from the dashboard or by presenting a valid RFID card. Swiping a card while disarmed arms the system (LED turns red). Swiping again disarms it and automatically opens the main door.
+The system can be armed or disarmed either from the dashboard or by presenting a valid RFID card. Swiping a card while disarmed arms the system (LED turns red). Swiping again disarms it without opening the door.
 
 ### Fingerprint Access
 
