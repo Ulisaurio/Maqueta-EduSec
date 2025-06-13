@@ -315,12 +315,19 @@ app.post('/huellas', authenticateToken, async (req, res) => {
         );
         const maxId = row && row.max ? Number(row.max) : 0;
         const nextId = maxId + 1;
-        const resp = await sendSerialStream(`enrolar ${nextId}`);
+        const resp = await sendSerialStream(
+            `enrolar ${nextId}`,
+            /(enrolada|error|no disponible)/i
+        );
         const ok = /enrolada/i.test(resp);
+        const noSensor = /sensor de huella no disponible/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
             [req.user.id, ok ? 'enrolar' : 'enrolar_error', resp]
         );
+        if (noSensor) {
+            return res.status(500).json({ msg: resp });
+        }
         if (!ok) {
             return res.status(500).json({ msg: resp });
         }
