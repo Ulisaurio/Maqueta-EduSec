@@ -256,4 +256,18 @@ void loop(){
       rfid.PICC_HaltA();
     }
   }
+
+  static unsigned long lastFingerCheck = 0;
+  if(fingerPresent && millis() - lastFingerCheck > 500){
+    lastFingerCheck = millis();
+    if(verifyFinger()){
+      Serial.print(F("Huella valida ID: "));
+      Serial.println(finger.fingerID);
+      digitalWrite(RELAY_PIN, LOW);
+      Serial.println(F("Acceso principal abierto"));
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println(F("Acceso principal cerrado"));
+    }
+  }
 }
