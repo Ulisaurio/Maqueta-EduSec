@@ -306,12 +306,17 @@ app.delete('/huellas/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         const resp = await sendSerial(`borrar ${id}`);
-        await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+        const ok = /Huella borrada/i.test(resp);
         await db.run(
             `INSERT INTO logs (usuario_id, accion, detalle) VALUES (?, ?, ?)`,
-            [req.user.id, 'borrar', `huella:${id} => ${resp}`]
+            [req.user.id, ok ? 'borrar' : 'borrar_error', `huella:${id} => ${resp}`]
         );
-        return res.json({ msg: resp });
+        if (ok) {
+            await db.run(`DELETE FROM huellas WHERE huella_id = ?`, [id]);
+            return res.json({ msg: resp });
+        } else {
+            return res.status(500).json({ msg: resp });
+        }
     } catch (err) {
         console.error('Error en DELETE /huellas/:id:', err);
         return res.status(500).json({ msg: 'Error interno' });
