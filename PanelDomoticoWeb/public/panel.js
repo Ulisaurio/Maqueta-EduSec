@@ -439,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
                       <label for="backupFreq" class="flex-1">Frecuencia Auto-Backup (días):</label>
                       <input id="backupFreq" type="number" class="input-field w-24" />
                     </div>
-                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo</label>
                     <label class="flex items-center gap-2"><input type="checkbox" id="chkDemoSens" class="focus-ring-primary">Modo Demo Sensores</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>
@@ -447,8 +447,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                 </div>
 
-                <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                  <div class="config-card-header flex items-center gap-2">📂 Gestión de Datos (Simulado)</div>
+                  <div class="config-card${simulatedMode ? '' : ' disabled'}">
+                  <div class="config-card-header flex items-center gap-2">📂 Gestión de Datos</div>
                   <div class="config-card-body flex flex-wrap gap-2">
                   <button id="backupBtn" class="btn flex-auto sm:flex-none">Copia de Seguridad</button>
                   <button id="restoreBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Restaurar Copia</button>
@@ -456,8 +456,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                 </div>
 
-                <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                  <div class="config-card-header flex items-center gap-2">🧪 Parámetros del Sistema (Simulado)</div>
+                  <div class="config-card${simulatedMode ? '' : ' disabled'}">
+                  <div class="config-card-header flex items-center gap-2">🧪 Parámetros del Sistema</div>
                   <div class="config-card-body space-y-4">
                   <div class="flex flex-wrap items-center gap-2">
                     <label for="sensorInterval" class="flex-1">Intervalo de Sondeo de Sensores (segundos):</label>
@@ -472,8 +472,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   </div>
                 </div>
 
-                <div class="config-card${simulatedMode ? '' : ' disabled'}" title="Opciones solo disponibles en modo simulado">
-                  <div class="config-card-header flex items-center gap-2">🧰 Mantenimiento del Sistema (Simulado)</div>
+                  <div class="config-card${simulatedMode ? '' : ' disabled'}">
+                  <div class="config-card-header flex items-center gap-2">🧰 Mantenimiento del Sistema</div>
                   <div class="config-card-body flex flex-wrap gap-2">
                   <button id="updateBtn" class="btn flex-auto sm:flex-none">Buscar Actualizaciones</button>
                   <button id="restartModulesBtn" class="btn bg-slate-700 hover:bg-slate-600 text-white flex-auto sm:flex-none">Reiniciar Módulos</button>
