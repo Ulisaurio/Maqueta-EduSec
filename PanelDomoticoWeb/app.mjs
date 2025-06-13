@@ -276,8 +276,11 @@ app.post('/huellas', authenticateToken, async (req, res) => {
     const fn = accionesMap['enrolar'];
     if (!fn) return res.status(500).json({ msg: 'Comando no soportado' });
     try {
-        const row = await db.get('SELECT MAX(huella_id) AS max FROM huellas');
-        const nextId = (row && row.max ? row.max : 0) + 1;
+        const row = await db.get(
+            'SELECT MAX(CAST(huella_id AS INTEGER)) AS max FROM huellas'
+        );
+        const maxId = row && row.max ? Number(row.max) : 0;
+        const nextId = maxId + 1;
         const resp = await sendSerialStream(`enrolar ${nextId}`);
         const ok = /enrolada/i.test(resp);
         await db.run(
@@ -287,7 +290,10 @@ app.post('/huellas', authenticateToken, async (req, res) => {
         if (!ok) {
             return res.status(500).json({ msg: resp });
         }
-        await db.run('INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, ?, ?, ?, ?)', [usuario_id, nextId, nombre, apellido_pat, apellido_mat]);
+        await db.run(
+            'INSERT INTO huellas (usuario_id, huella_id, nombre, apellido_pat, apellido_mat) VALUES (?, CAST(? AS INTEGER), ?, ?, ?)',
+            [usuario_id, nextId, nombre, apellido_pat, apellido_mat]
+        );
         res.json({ huella_id: nextId, usuario_id, nombre, apellido_pat, apellido_mat });
     } catch (err) {
         console.error('Error en POST /huellas:', err);
