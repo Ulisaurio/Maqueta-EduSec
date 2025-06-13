@@ -65,6 +65,10 @@ The `huella` command triggers a fingerprint check on the Arduino. If a valid fin
 
 Enable **Modo Demo Sensores** from the configuration screen to bypass stored credentials. When active, any RFID card read or fingerprint detected is treated as valid, allowing quick demonstrations even if enrollment fails.
 
+### Door Sensor Calibration
+
+Root users can calibrate the ultrasonic door sensor from the settings panel. The wizard measures the distance with the door closed, open and closed again, averages the readings to the nearest centimeter and stores them as the open and closed thresholds. These values replace the fixed 10 cm limit used by the UI.
+
 ### Assets Notice
 The logo file `logo_edusec.png` is not included in this repository.
 After cloning the project, manually copy it into:
