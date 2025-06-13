@@ -1133,32 +1133,32 @@ const applyBtnStyle = () => {};
                 lastDoorOpen = null;
             }
 
-            try {
-                const rfidData = await api('/comando/rfid');
-                const m = /UID:\s*([A-F0-9:]+)/i.exec(rfidData.resultado || '');
-                const uid = m ? m[1].toUpperCase() : null;
-                if (uid) {
-                    addSecurityLog(`RFID: ${uid}`);
-                    const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
-                    if (systemArmed && val) {
-                        try {
-                            await api('/system-state', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ armed: false })
-                            });
-                            systemArmed = false;
-                            updateSystemStateUI();
-                            addSecurityLog('Sistema desarmado por RFID');
-                            cmd('abrir');
-                        } catch {}
-                    }
-                }
-            } catch {}
         }
 
         async function startSecurityMonitoring() {
             clearInterval(monitorInterval);
+            if (rfidEvt) rfidEvt.close();
+            rfidEvt = new EventSource('/serial-events');
+            rfidEvt.onmessage = async e => {
+                const m = /UID:\s*([A-F0-9:]+)/i.exec(e.data || '');
+                const uid = m ? m[1].toUpperCase() : null;
+                if (!uid) return;
+                addSecurityLog(`RFID: ${uid}`);
+                const val = await api(`/rfid/validate/${uid}`).then(r => !!r.valid).catch(() => false);
+                if (systemArmed && val) {
+                    try {
+                        await api('/system-state', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ armed: false })
+                        });
+                        systemArmed = false;
+                        updateSystemStateUI();
+                        addSecurityLog('Sistema desarmado por RFID');
+                        cmd('abrir');
+                    } catch {}
+                }
+            };
             try {
                 const data = await api('/system-state');
                 systemArmed = !!data.armed;
@@ -1243,6 +1243,7 @@ const applyBtnStyle = () => {};
         let lastTempError = false;
         let systemArmed = false;
         let monitorInterval = null;
+        let rfidEvt = null;
         let sessionTimer = null;
         let buzzerTimeout = null;
         let lastPir = null;

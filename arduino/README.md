@@ -17,6 +17,11 @@ To build and upload a sketch using the Arduino IDE:
    - MFRC522
 4. Connect the board and upload.
 
+Revision R2 changes the MFRC522 wiring:
+`SDA` is now connected to pin **30** and `RST` to pin **31**.
+The firmware continuously scans for RFID cards and prints `UID:` messages
+on detection. The `rfid` command is still available for manual tests.
+
 The Node.js backend communicates with the board over a serial port at 9600
 baud. Commands must be terminated with a newline character and the firmware
 responds with a single line of text.
