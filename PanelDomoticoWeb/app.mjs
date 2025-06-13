@@ -50,6 +50,8 @@ db = await getDb();  // Obtener instancia “promisificada” de la BD
 const cfg = await readConfig();
 let systemArmed = !!cfg.systemArmed;
 let sensorDemoMode = /^(true|1)$/i.test(await getSetting('sensorDemoMode') || 'false');
+let lastRfidUid = null;
+let lastRfidTime = 0;
 try {
     if (systemArmed) {
         await rgbRedCmd();
@@ -64,6 +66,12 @@ serialEmitter.on('message', async msg => {
     const m = /^UID:\s*([A-F0-9:]+)/i.exec(msg);
     if (!m) return;
     const uid = m[1].toUpperCase();
+    const now = Date.now();
+    if (uid === lastRfidUid && now - lastRfidTime < 2000) {
+        return;
+    }
+    lastRfidUid = uid;
+    lastRfidTime = now;
     try {
         const row = await db.get('SELECT usuario_id FROM rfid_cards WHERE uid = ?', [uid]);
         await db.run(
