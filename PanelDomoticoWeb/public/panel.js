@@ -439,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
                       <label for="backupFreq" class="flex-1">Frecuencia Auto-Backup (días):</label>
                       <input id="backupFreq" type="number" class="input-field w-24" />
                     </div>
-                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="chkSimMode" class="focus-ring-primary">Modo Simulado</label>
                     <label class="flex items-center gap-2"><input type="checkbox" id="chkDemoSens" class="focus-ring-primary">Modo Demo Sensores</label>
                   </fieldset>
                   <button id="savePrefsBtn" class="btn mt-2 flex items-center gap-1"><i data-feather="save"></i>Guardar Preferencias</button>

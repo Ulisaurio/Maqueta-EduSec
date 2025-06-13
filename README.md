@@ -33,6 +33,7 @@ The UI includes:
 - Silent buzzer status checks (the buzzer only sounds on alarms or when
   using the "Probar" testing button)
 - Temperature chart with hover tooltips
+- "Modo Simulado" option for configuring the system without hardware
 
 
 All components aim to be mobile friendly and accessible.
@@ -63,7 +64,12 @@ The `huella` command triggers a fingerprint check on the Arduino. If a valid fin
 
 ### Sensor Demo Mode
 
+
 Enable **Modo Demo Sensores** from the configuration screen to bypass stored credentials. When active, any RFID card read or fingerprint detected is treated as valid, allowing quick demonstrations even if enrollment fails.
+
+### Simulated Mode
+
+Enable **Modo Simulado** to gain full configuration capabilities without connecting real hardware. This mode lets you explore all settings and data management features entirely in the browser.
 
 ### Door Sensor Calibration
 
