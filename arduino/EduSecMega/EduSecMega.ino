@@ -203,14 +203,9 @@ void loop() {
   }
   else if (strcmp(cmd, "pir_status") == 0) {
     pinMode(PIR_PIN, INPUT);
-    int val = analogRead(PIR_PIN);
-    if (val > 100 && val < 900) {
-      Serial.println(F("PIR no disponible"));
-    } else {
-      int v = val > 512 ? 1 : 0;
-      Serial.print(F("PIR: "));
-      Serial.println(v);
-    }
+    int v = digitalRead(PIR_PIN);
+    Serial.print(F("PIR: "));
+    Serial.println(v);
   }
   else if (strcmp(cmd, "rfid") == 0) {
     if (!rfidPresent) {
