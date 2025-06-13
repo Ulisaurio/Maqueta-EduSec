@@ -25,6 +25,7 @@ DallasTemperature sensors(&oneWire);
 char cmd[64];
 bool fingerPresent = false;
 bool rfidPresent = false;
+bool demoMode = false;
 
 void setRGB(uint8_t r,uint8_t g,uint8_t b){
   analogWrite(LED_R,r);
@@ -250,6 +251,17 @@ void loop(){
       Serial.println(F(" C"));
     }
   }
+  else if(hasCmd && strncmp(cmd,"demo ",5)==0){
+    if(strcmp(cmd+5,"1")==0){
+      demoMode = true;
+      Serial.println(F("Demo mode ON"));
+    } else if(strcmp(cmd+5,"0")==0){
+      demoMode = false;
+      Serial.println(F("Demo mode OFF"));
+    } else {
+      Serial.println(F("comando no reconocido"));
+    }
+  }
   else if(hasCmd){
     Serial.println(F("comando no reconocido"));
   }
@@ -275,6 +287,13 @@ void loop(){
     if(verifyFinger()){
       Serial.print(F("Huella valida ID: "));
       Serial.println(finger.fingerID);
+      digitalWrite(RELAY_PIN, LOW);
+      Serial.println(F("Acceso principal abierto"));
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println(F("Acceso principal cerrado"));
+    } else if(demoMode && finger.getImage() == FINGERPRINT_OK){
+      Serial.println(F("Huella valida ID: 0"));
       digitalWrite(RELAY_PIN, LOW);
       Serial.println(F("Acceso principal abierto"));
       delay(5000);
