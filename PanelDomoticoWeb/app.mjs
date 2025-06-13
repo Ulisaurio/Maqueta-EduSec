@@ -512,6 +512,11 @@ app.patch('/settings', authenticateToken, async (req, res) => {
             await setSetting(k, String(v));
             if (k === 'sensorDemoMode') {
                 sensorDemoMode = /^(true|1)$/i.test(String(v));
+                try {
+                    await sendSerial(`demo ${sensorDemoMode ? 1 : 0}`);
+                } catch (err) {
+                    console.error('Error enviando modo demo:', err);
+                }
             }
         }
         res.json({ msg: 'ok' });
