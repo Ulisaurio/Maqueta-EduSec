@@ -43,8 +43,8 @@ The `arduino/` directory contains the sketches that run on the microcontroller.
 `arduino/original` stores the standalone prototypes, while
 `arduino/EduSecMega` is the unified sketch for an Arduino Mega. Consult the
 respective `README.md` files for pin mapping and library requirements.
-Currently `arduino/EduSecMega/EduSecMega_R2.ino` is the recommended firmware and the version deployed on the demo panel. The previous `EduSecMega.ino` file is kept for reference.
-The fingerprint reader now scans continuously. When a stored fingerprint is recognized the door relay opens for about five seconds and then closes again. Each successful match is reported over serial as `Huella valida ID:<n>` so the backend can log the event.
+Currently `arduino/EduSecMega/EduSecMega_R2.ino` is the recommended firmware and the version deployed on the demo panel. The previous `EduSecMega.ino` file is kept for reference. Revision R2 polls the RFID reader and fingerprint sensor in the background, printing `UID:` for cards and either `Huella valida ID:` or `Huella no valida` whenever a finger is detected.
+When a stored fingerprint is recognized the door relay opens for about five seconds and then closes again. Each successful match is reported over serial so the backend can log the event.
 
 ## Access System
 
