@@ -26,11 +26,12 @@ The latest revision of this firmware is `EduSecMega_R2.ino`.
 
 The serial port runs at 9600 bps and expects newline-terminated commands
 (e.g. `abrir`, `enrolar 5`, `pir`). The sketch responds with a single line
-suitable for the `sendSerial` helper in the Node.js backend. Both revisions
-periodically scan the RFID reader and fingerprint sensor, printing `UID:` or
-`Huella valida ID:` messages when credentials are detected. Revision R2 also
-understands `demo 1` or `demo 0` to enable or disable the firmware's demo mode,
-allowing fingerprints to open the door even if they are not enrolled.
+suitable for the `sendSerial` helper in the Node.js backend. Revision R2
+periodically scans the RFID reader and fingerprint sensor, printing `UID:` for
+cards and either `Huella valida ID:` or `Huella no valida` whenever a finger is
+detected. It also understands `demo 1` or `demo 0` to enable or disable the
+firmware's demo mode, allowing fingerprints to open the door even if they are
+not enrolled.
 
 ## Module voltage requirements
 
