@@ -442,6 +442,9 @@ app.post('/rfid', authenticateToken, async (req, res) => {
         );
         res.json({ uid, usuario_id });
     } catch (err) {
+        if (err && err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+            return res.status(409).json({ msg: 'Tarjeta ya registrada' });
+        }
         console.error('Error en POST /rfid:', err);
         res.status(500).json({ msg: 'Error interno' });
     }
