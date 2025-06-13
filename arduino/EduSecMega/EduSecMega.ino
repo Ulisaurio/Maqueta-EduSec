@@ -263,4 +263,28 @@ void loop() {
   else {
     Serial.println(F("comando no reconocido"));
   }
+
+  static unsigned long lastScan = 0;
+  if (rfidPresent && millis() - lastScan > 300) {
+    lastScan = millis();
+    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+      Serial.print(F("UID: "));
+      for (byte i = 0; i < rfid.uid.size; i++) {
+        if (rfid.uid.uidByte[i] < 0x10) Serial.print('0');
+        Serial.print(rfid.uid.uidByte[i], HEX);
+        if (i < rfid.uid.size - 1) Serial.print(':');
+      }
+      Serial.println();
+      rfid.PICC_HaltA();
+    }
+  }
+
+  static unsigned long lastFinger = 0;
+  if (fingerPresent && millis() - lastFinger > 500) {
+    lastFinger = millis();
+    if (verificarHuella()) {
+      Serial.print(F("Huella valida ID: "));
+      Serial.println(finger.fingerID);
+    }
+  }
 }

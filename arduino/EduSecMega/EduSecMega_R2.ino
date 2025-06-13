@@ -279,21 +279,28 @@ void loop(){
   static unsigned long lastFingerCheck = 0;
   if(fingerPresent && millis() - lastFingerCheck > 500){
     lastFingerCheck = millis();
-    if(verifyFinger()){
-      Serial.print(F("Huella valida ID: "));
-      Serial.println(finger.fingerID);
-      digitalWrite(RELAY_PIN, LOW);
-      Serial.println(F("Acceso principal abierto"));
-      delay(5000);
-      digitalWrite(RELAY_PIN, HIGH);
-      Serial.println(F("Acceso principal cerrado"));
-    } else if(demoMode && finger.getImage() == FINGERPRINT_OK){
-      Serial.println(F("Huella valida ID: 0"));
-      digitalWrite(RELAY_PIN, LOW);
-      Serial.println(F("Acceso principal abierto"));
-      delay(5000);
-      digitalWrite(RELAY_PIN, HIGH);
-      Serial.println(F("Acceso principal cerrado"));
+    int r = finger.getImage();
+    if(r == FINGERPRINT_OK){
+      bool valid = finger.image2Tz() == FINGERPRINT_OK &&
+                   finger.fingerFastSearch() == FINGERPRINT_OK;
+      if(valid){
+        Serial.print(F("Huella valida ID: "));
+        Serial.println(finger.fingerID);
+        digitalWrite(RELAY_PIN, LOW);
+        Serial.println(F("Acceso principal abierto"));
+        delay(5000);
+        digitalWrite(RELAY_PIN, HIGH);
+        Serial.println(F("Acceso principal cerrado"));
+      } else if(demoMode){
+        Serial.println(F("Huella valida ID: 0"));
+        digitalWrite(RELAY_PIN, LOW);
+        Serial.println(F("Acceso principal abierto"));
+        delay(5000);
+        digitalWrite(RELAY_PIN, HIGH);
+        Serial.println(F("Acceso principal cerrado"));
+      } else {
+        Serial.println(F("Huella no valida"));
+      }
     }
   }
 }
