@@ -87,7 +87,9 @@ export default async function sendSerial(comando) {
         let timeoutId;
         const onData = data => {
             clearTimeout(timeoutId);
-            parser.off('data', onData);
+            if (parser) {
+                parser.off('data', onData);
+            }
             resolve(data);
         };
 
@@ -95,7 +97,9 @@ export default async function sendSerial(comando) {
             port.write(comando + '\n', err => {
                 if (err) {
                     arduinoAvailable = false;
-                    parser.off('data', onData);
+                    if (parser) {
+                        parser.off('data', onData);
+                    }
                     clearTimeout(timeoutId);
                     return resolve(`Error enviando comando: ${err.message}`);
                 }
@@ -106,7 +110,9 @@ export default async function sendSerial(comando) {
             port.open(async err => {
                 if (err) {
                     arduinoAvailable = false;
-                    parser.off('data', onData);
+                    if (parser) {
+                        parser.off('data', onData);
+                    }
                     clearTimeout(timeoutId);
                     return resolve(`Error abriendo puerto: ${err.message}`);
                 }
@@ -125,11 +131,15 @@ export default async function sendSerial(comando) {
         }
 
         timeoutId = setTimeout(() => {
-            parser.off('data', onData);
+            if (parser) {
+                parser.off('data', onData);
+            }
             resolve('Timeout: sin respuesta del Arduino.');
         }, 2000);
 
-        parser.once('data', onData);
+        if (parser) {
+            parser.once('data', onData);
+        }
     });
 }
 
@@ -168,7 +178,9 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
         };
         const cleanup = () => {
             clearTimeout(timer);
-            parser.off('data', onData);
+            if (parser) {
+                parser.off('data', onData);
+            }
         };
         const onData = data => {
             lastLine = data;
@@ -198,7 +210,9 @@ export async function sendSerialStream(comando, endRegex = /(enrolada|error)/i, 
             writeCmd();
         }
         let lastLine = '';
-        parser.on('data', onData);
+        if (parser) {
+            parser.on('data', onData);
+        }
         const timer = setTimeout(() => {
             cleanup();
             resolve(lastLine || 'Timeout: sin respuesta del Arduino.');
